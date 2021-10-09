@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-
+from dotenv import load_dotenv
 
 """
     Welcome to the settings module! Please take a minute to read
@@ -19,6 +19,9 @@ from pathlib import Path
     for example.
 """
 
+load_dotenv()
+
+DEV_MODE = True
 
 # Create a new log file for each time your app starts, or append the most recent one.
 APPEND_LOG_FILES = True
@@ -35,8 +38,7 @@ MESSAGE_ROUTER = {
     # the user's message. One is randomly chosen by the Router and returned to
     # the user.
     "COMMAND_UNKNOWN_RESPONSES": [
-        "I'm sorry, I didn't understand. Try again! ",
-        "Hmm.. I don't think I follow?"
+        "Ursäkta, jag förstår inte?",
     ],
 
     # Define the keyword for Pyttman's auto-generated help pages to be
@@ -51,7 +53,7 @@ MESSAGE_ROUTER = {
 # and select "Copy / Paste Special" -> "Copy Reference" and paste it below.
 
 # ABILITIES = ["my_app.abilities.clockability.ClockAbility"]
-ABILITIES = []
+ABILITIES = ["jarvis.abilities.finances.ability.FinanceAbility"]
 
 # This text is what will be returned to users if your app runs in to
 # a fatal error from which no Reply object could be returned to the client.
@@ -72,7 +74,12 @@ FATAL_EXCEPTION_AUTO_REPLY = "I'm sorry, something went wrong. Try again in a fe
 # TIP! Unsure of what to put here? 
 # Check out the documentation: https://github.com/dotchetter/Pyttman/wiki/Clients
 
-CLIENT = {}
+
+CLIENT = {
+    "class": "pyttman.clients.community.discord.client.DiscordClient",
+    "token": os.getenv("DISCORD_TOKEN"),
+    "guild": os.getenv("DISCORD_GUILD")
+}
 
 # No need to change this setting
 APP_BASE_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
