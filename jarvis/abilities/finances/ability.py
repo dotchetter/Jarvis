@@ -1,6 +1,6 @@
 from typing import Union
 
-import pymongo as pymongo
+import mongoengine
 from pyttman import settings
 from pyttman.core.ability import Ability
 from pyttman.core.communication.models.containers import Reply, ReplyStream, Message
@@ -8,7 +8,7 @@ from pyttman.core.intent import Intent
 from pyttman.core.parsing import identifiers
 from pyttman.core.parsing.parsers import ValueParser
 
-from jarvis.abilities.finances.utils import Expense
+from jarvis.models import Expense, Author
 
 
 class AddExpense(Intent):
@@ -17,7 +17,7 @@ class AddExpense(Intent):
     """
     lead = ("utgift", "expense", "köpt", "köpte", "bought")
     description = "Lägg till en utgift. Utgifter sparas personligt."
-    example = "utgift mat 650"
+    example = "utgift frukost till imorgon 234"
 
     class EntityParser:
         expense_name = ValueParser(span=10)
@@ -30,13 +30,17 @@ class AddExpense(Intent):
         if None in (expense_value, expense_name):
             return Reply("Du måste ange både namn och pris på vad du har köpt.")
 
-        if (user_expenses := self.storage.get("expenses").get(message.author)) is None:
-            user_expenses = []
-            self.storage.get("expenses")[message.author] = user_expenses
+        if authors := Author.objects(name=message.author).all_fields():
+            author = authors.first()
+            print("This author is already in the database:", author)
+        else:
+            print("The author was not in the database; saving them")
+            author = Author(name=message.author).save()
 
-        expense = Expense(price=expense_value, name=expense_name)
-        user_expenses.append(expense)
-        return Reply(f"Utgift sparad: '{expense.name}' {expense.price} kronor.")
+        expense = Expense(price=expense_value, name=expense_name, author=author)
+        expense.save()
+
+        return Reply(f"Utgift sparad: '{expense.name}', pris: {expense.price}:-")
 
 
 class GetExpensesForUser(Intent):
@@ -48,17 +52,13 @@ class GetExpensesForUser(Intent):
     trail = ("utgifter", "expenses", "expense", "utlägg")
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
-        if expenses := self.storage.get("expenses").get(message.author):
-            return ReplyStream(expenses)
-        return Reply(f"Det finns inga lagrade utgifter för dig, {message.author}")
+        author_expenses = Expense.objects(author__name=message.author)
+        return ReplyStream(f"Namn: {i.name}, pris: {i.price}" for i in author_expenses)
 
 
 class FinanceAbility(Ability):
     intents = (AddExpense, GetExpensesForUser)
-    mongo_db: pymongo.MongoClient = None
 
     def configure(self):
-        self.mongo_db = pymongo.MongoClient()
-
-        # Initialize an Expense dict mapping Users to their Expenses
-        self.storage.put("expenses", {})
+        mongoengine.connect(db="jarvis", username="db_full_access_user",
+                            password=settings.MONGO_ATLAS_PW, host=settings.MONGO_ATLAS_URL)

@@ -21,7 +21,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DEV_MODE = True
+DEV_MODE = False
+
+MONGO_ATLAS_URL = os.getenv("MONGO_ATLAS_URL")
+MONGO_ATLAS_PW = os.getenv("MONGO_ATLAS_PW")
 
 # Create a new log file for each time your app starts, or append the most recent one.
 APPEND_LOG_FILES = True
