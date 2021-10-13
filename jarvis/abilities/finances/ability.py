@@ -8,7 +8,7 @@ from pyttman.core.intent import Intent
 from pyttman.core.parsing import identifiers
 from pyttman.core.parsing.parsers import ValueParser
 
-from jarvis.models import Expense, Author
+from jarvis.models import Expense
 
 
 class AddExpense(Intent):

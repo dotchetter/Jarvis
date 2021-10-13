@@ -3,18 +3,6 @@ from datetime import datetime
 import mongoengine
 
 
-class Author(mongoengine.Document):
-    """
-    Models a user interacting with the application.
-    Since Pyttman refers to users as 'author' available
-    on the Message object as 'Message.author', the
-    'author_reference' field literally refers to the
-    ID of choice for the given author, assigned at
-    instantiation.
-    """
-    name = mongoengine.StringField(required=True)
-
-
 class Expense(mongoengine.Document):
     """
     MongoDB MongoEngine model
@@ -24,7 +12,7 @@ class Expense(mongoengine.Document):
     and tracks its name and price. Timestamp of purchase
     in the field 'created' defaults to time of instantiation.
     """
-    author = mongoengine.ReferenceField(Author, required=True)
+    author = mongoengine.DynamicField(required=True)
     name = mongoengine.StringField(required=True, max_length=200)
     price = mongoengine.IntField(required=True, min_value=0)
     created = mongoengine.DateTimeField(default=datetime.now())
