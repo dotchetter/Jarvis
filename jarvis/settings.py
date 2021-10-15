@@ -23,8 +23,14 @@ load_dotenv()
 
 DEV_MODE = False
 
-MONGO_ATLAS_URL = os.getenv("MONGO_ATLAS_URL")
-MONGO_ATLAS_PW = os.getenv("MONGO_ATLAS_PW")
+MONGO_DB_CONFIG = {
+    "db": os.getenv("MONGO_DB_NAME"),
+    "host": os.getenv("MONGO_DB_URL"),
+    "username": os.getenv("MONGO_DB_USER"),
+    "password": os.getenv("MONGO_DB_PASSWORD"),
+    "port": int(os.getenv("MONGO_DB_PORT"))
+}
+
 
 # Create a new log file for each time your app starts, or append the most recent one.
 APPEND_LOG_FILES = True
@@ -65,7 +71,7 @@ ABILITIES = ["jarvis.abilities.finances.ability.FinanceAbility"]
 # app isn't simply ignoring them by keeping quiet.
 # In the log files of your Pyttman app, you can track down the error 
 # by searching for the Error UUID written in chat when the error occurred.
-FATAL_EXCEPTION_AUTO_REPLY = "I'm sorry, something went wrong. Try again in a few moments."
+FATAL_EXCEPTION_AUTO_REPLY = "Åh nej! Något gick fel... Simon, kikar du på detta:"
 
 # Define the client which your Pyttman app uses as its front end here.
 # There are Client classes available to use which Pyttman provides for you,

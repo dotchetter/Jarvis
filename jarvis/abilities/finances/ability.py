@@ -2,6 +2,7 @@ from typing import Union
 
 import mongoengine
 import pymongo.errors
+import pyttman
 from pyttman import settings
 from pyttman.core.ability import Ability
 from pyttman.core.communication.models.containers import Reply, ReplyStream, Message
@@ -32,7 +33,14 @@ class AddExpense(Intent):
         if None in (expense_value, expense_name):
             return Reply("Du måste ange både namn och pris på vad du har köpt.")
 
-        expense = Expense(price=expense_value, name=expense_name, author=message.author.id)
+        if settings.DEV_MODE:
+            author_id = message.author
+        elif message.mentions:
+            author_id = message.mentions.pop().id
+        else:
+            author_id = message.author.id
+
+        expense = Expense(price=expense_value, name=expense_name, author=author_id)
         expense.save()
 
         return Reply(f"Utgift sparad: '{expense.name}', pris: {expense.price}:-")
@@ -61,19 +69,23 @@ class GetExpenses(Intent):
             author_id = message.author.id
 
         try:
-            if author_expenses := Expense.objects(author=author_id):
-                for expense in author_expenses:
-                    pretty_expenses.append(f"* Namn: {expense.name}\n"
-                                           f"  Pris: {expense.price}\n"
-                                           f"  Datum: {expense.created}")
-                    return ReplyStream(pretty_expenses)
+            for expense in Expense.objects(author=author_id):
+                pretty_expenses.append(f"**Namn:** {expense.name}\n"
+                                       f"**Belopp:** {expense.price}:-\n"
+                                       f"**Datum:** {expense.created.strftime('%y-%m-%d %H:%M')}")
+                pretty_expenses.append("\n")
         except pymongo.errors.ServerSelectionTimeoutError:
-            return Reply("Ett fel uppstod när data hämtades. Prova en annan sökning.")
-        return Reply(f"Det finns inga utgifter sparade för {message.author.mention}")
+            return Reply("Ett fel uppstod när data hämtades. "
+                         "Prova en annan sökning.")
+
+        if len(pretty_expenses):
+            return ReplyStream(pretty_expenses)
+        return Reply(f"Det finns inga utgifter sparade för den personen.")
 
 
 class FinanceAbility(Ability):
     intents = (AddExpense, GetExpenses)
 
     def configure(self):
-        mongoengine.connect(settings.MONGO_ATLAS_URL)
+        mongoengine.connect(**settings.MONGO_DB_CONFIG)
+        print(Expense.objects(author=344940052268449792))
