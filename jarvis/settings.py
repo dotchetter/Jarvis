@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import certifi
 
 """
     Welcome to the settings module! Please take a minute to read
@@ -24,6 +25,7 @@ load_dotenv()
 DEV_MODE = False
 
 MONGO_DB_CONFIG = {
+    "tlsCAFile": certifi.where(),
     "db": os.getenv("MONGO_DB_NAME"),
     "host": os.getenv("MONGO_DB_URL"),
     "username": os.getenv("MONGO_DB_USER"),
