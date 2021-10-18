@@ -15,7 +15,7 @@ class Expense(mongoengine.Document):
     author = mongoengine.DynamicField(required=True)
     name = mongoengine.StringField(required=True, max_length=200)
     price = mongoengine.IntField(required=True, min_value=0)
-    created = mongoengine.DateTimeField(default=datetime.now())
+    created = mongoengine.DateField(default=datetime.now())
 
 
 class Ingredient(mongoengine.EmbeddedDocument):
