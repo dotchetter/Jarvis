@@ -56,7 +56,7 @@ MESSAGE_ROUTER = {
     # displayed for a user, if they type this word in the beginning of
     # a message. The keyword is case insensitive and has to occur as
     # first string in the message from the user.
-    "HELP_KEYWORD": "help",
+    "HELP_KEYWORD": "hjälp",
 }
 
 # Define your Ability classes here, with path starting from your project directory.
