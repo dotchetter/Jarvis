@@ -1,9 +1,12 @@
 from datetime import datetime
 
 import mongoengine
+import uuid as uuid
+
+from mongoengine import Document, EmbeddedDocument, EmbeddedDocumentListField
 
 
-class Expense(mongoengine.Document):
+class Expense(Document):
     """
     MongoDB MongoEngine model
 
@@ -18,7 +21,7 @@ class Expense(mongoengine.Document):
     created = mongoengine.DateField(default=datetime.now())
 
 
-class Ingredient(mongoengine.EmbeddedDocument):
+class Ingredient(EmbeddedDocument):
     """
     Ingredient model used when creating shopping
     lists. Ingredients are Embedded under ShoppingList
@@ -27,7 +30,7 @@ class Ingredient(mongoengine.EmbeddedDocument):
     name = mongoengine.StringField(max_length=128, required=True)
 
 
-class ShoppingList(mongoengine.Document):
+class ShoppingList(Document):
     """
     Model representing a shopping list.
     The Shopping list contains a list of
@@ -36,3 +39,29 @@ class ShoppingList(mongoengine.Document):
     """
     ingredients = mongoengine.ListField(mongoengine.EmbeddedDocumentField(Ingredient))
 
+
+class PlatformAuthorAlias(EmbeddedDocument):
+    """
+    The PlatformAuthorAlias model represents Authors
+    in Pyttman apps which vary depending on the
+    platform the app is connected to through
+    Clients.
+    """
+    uuid = mongoengine.StringField(primary_key=True)
+
+
+class User(Document):
+    """
+    A platform-independent User for the Jarvis
+    application.
+
+    The User maps to author id to whichever
+    platforms are used with the app.
+
+    Users map One-to-many to PlatformAuthorAlias
+    model objects, to represent one user
+    on many platforms.
+    """
+    uuid = mongoengine.StringField(default=uuid.uuid4(), primary_key=True)
+    name = mongoengine.StringField()
+    platform_author_references = EmbeddedDocumentListField(PlatformAuthorAlias)
