@@ -22,11 +22,13 @@ import certifi
 
 load_dotenv()
 
-DEV_MODE = False
+DEV_MODE = True
+
+db_name = os.getenv("MONGO_DB_NAME_DEV") if DEV_MODE else os.getenv("MONGO_DB_NAME_PROD")
 
 MONGO_DB_CONFIG = {
     "tlsCAFile": certifi.where(),
-    "db": os.getenv("MONGO_DB_NAME"),
+    "db": db_name,
     "host": os.getenv("MONGO_DB_URL"),
     "username": os.getenv("MONGO_DB_USER"),
     "password": os.getenv("MONGO_DB_PASSWORD"),
