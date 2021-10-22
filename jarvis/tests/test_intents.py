@@ -6,13 +6,13 @@ import pyttman
 from pyttman.core.communication.models.containers import Message
 from pyttman.core.storage.basestorage import Storage
 
-from jarvis.abilities.finances.ability import AddExpense
+from jarvis.abilities.finances.ability import AddExpenseIntent
 
 
 class TestAddExpenseIntent(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.add_expense_intent = AddExpense()
+        self.add_expense_intent = AddExpenseIntent()
         self.add_expense_intent.storage = Storage()
 
     def test_expense_is_parsed_correctly(self):

@@ -120,7 +120,7 @@ class FinanceAbility(Ability):
     expenses at home, to make splitting bills fair
     and square.
     """
-    intents = (AddExpense, GetExpenses, GetExpenseSum)
+    intents = (AddExpenseIntent, ListExpensesIntent, SummarizeExpensesIntent)
 
     def configure(self):
         # Connect to the MongoDB Atlas database
