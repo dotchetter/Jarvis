@@ -111,6 +111,14 @@ class SummarizeExpensesIntent(Intent):
         return Reply(f"Summan för {Month(current_month).name} är **{sum(filtered)}**:-")
 
 
+class CreateSplitBillsReport(Intent):
+    """
+    # TODO - Write docstring
+    """
+    def respond(self, message: Message) -> Union[Reply, ReplyStream]:
+        pass
+
+
 class FinanceAbility(Ability):
     """
     This Ability class holds private-finance related
