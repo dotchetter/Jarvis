@@ -16,7 +16,7 @@ from jarvis.abilities.finances.month import Month
 from jarvis.models import Expense
 
 
-class AddExpense(Intent):
+class AddExpenseIntent(Intent):
     """
     Allows users to add expenses.
     """
@@ -46,7 +46,7 @@ class AddExpense(Intent):
         return Reply(f"Utgift sparad-: '{expense.name}', pris: {expense.price}:-")
 
 
-class GetExpenses(Intent):
+class ListExpensesIntent(Intent):
     """
     Returns a ReplyStream of all expenses for the
     user making the request.
@@ -82,7 +82,7 @@ class GetExpenses(Intent):
         return Reply(f"Det finns inga utgifter sparade för den personen.")
 
 
-class GetExpenseSum(Intent):
+class SummarizeExpensesIntent(Intent):
     """
     Returns the sum of all expenses for the author.
     """
