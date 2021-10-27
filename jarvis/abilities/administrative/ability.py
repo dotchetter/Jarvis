@@ -19,3 +19,5 @@ class CreateUserIntent(Intent):
     by the platform and associates the identifier
     with the user.
     """
+    def respond(self, message: Message) -> Union[Reply, ReplyStream]:
+        pass
