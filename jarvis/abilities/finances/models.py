@@ -48,6 +48,7 @@ class PlatformAuthorAlias(EmbeddedDocument):
     Clients.
     """
     uuid = mongoengine.StringField(primary_key=True)
+    name = mongoengine.DynamicField()
 
 
 class User(Document):
