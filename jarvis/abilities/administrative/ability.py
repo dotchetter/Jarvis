@@ -6,6 +6,9 @@ administrative intents in Jarvis.
 Administrative intents include creating
 database entries, changing settings, etc.
 """
+from types import Union
+
+from pyttman.core.communication.models.containers import Message, Reply, ReplyStream
 from pyttman.core.intent import Intent
 
 
