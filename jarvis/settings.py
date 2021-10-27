@@ -3,32 +3,21 @@ from pathlib import Path
 from dotenv import load_dotenv
 import certifi
 
-"""
-    Welcome to the settings module! Please take a minute to read
-    this little introduction, if it's your first time here.
-    
-    If you've used Django before, this is familiar to you and 
-    you can stop reading now. If you haven't, thats okay too. 
-    
-    Everything in this file is available to you in your app 
-    through 'pyttman.settings'. You can store things here, but
-    be >>> very careful <<< not to push API tokens, 
-    passwords or other sensitive details to version control. 
-    This is why it's recommended to use .env or another form 
-    of storing these sensitive credentials in your app, and 
-    then using them here in this file with `os.getenv("my_api_token")` 
-    for example.
-"""
-
 load_dotenv()
 
 DEV_MODE = True
 
-db_name = os.getenv("MONGO_DB_NAME_DEV") if DEV_MODE else os.getenv("MONGO_DB_NAME_PROD")
+INTERACTIVE_SHELL = False
+
+# Selection is performed in
+DB_NAME_PROD = os.getenv("MONGO_DB_NAME_PROD")
+DB_NAME_DEV = os.getenv("MONGO_DB_NAME_PROD")
+
+db_name = DB_NAME_DEV if DEV_MODE else DB_NAME_PROD
 
 MONGO_DB_CONFIG = {
     "tlsCAFile": certifi.where(),
-    "db": db_name,
+    "db": None,  # Configured in Ability 'Configure' hook
     "host": os.getenv("MONGO_DB_URL"),
     "username": os.getenv("MONGO_DB_USER"),
     "password": os.getenv("MONGO_DB_PASSWORD"),
@@ -90,8 +79,8 @@ FATAL_EXCEPTION_AUTO_REPLY = "Åh nej! Något gick fel... Simon, kikar du på de
 
 CLIENT = {
     "class": "pyttman.clients.community.discord.client.DiscordClient",
-    "token": os.getenv("DISCORD_TOKEN"),
-    "guild": os.getenv("DISCORD_GUILD")
+    "token": os.getenv("DISCORD_TOKEN_DEV") if DEV_MODE else os.getenv("DISCORD_TOKEN_PROD"),
+    "guild": os.getenv("DISCORD_GUILD_DEV") if DEV_MODE else os.getenv("DISCORD_GUILD_PROD"),
 }
 
 # No need to change this setting
