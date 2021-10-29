@@ -23,7 +23,6 @@ class FinanceAbility(Ability):
         Configure hook method, executed before the app starts
         :return: None
         """
-
         # Connect to the appropriate MongoDB Atlas database
         if settings.DEV_MODE:
             settings.MONGO_DB_CONFIG["db"] = settings.DB_NAME_DEV
@@ -31,6 +30,9 @@ class FinanceAbility(Ability):
             settings.MONGO_DB_CONFIG["db"] = settings.DB_NAME_PROD
 
         mongoengine.connect(**settings.MONGO_DB_CONFIG)
+
+        # Store the date format for expenses when displayed
+        self.storage.put("date_format_for_expenses", "%y-%m-%d")
 
         # Set up a default reply when no expenses are found
         self.storage.put("default_replies",
