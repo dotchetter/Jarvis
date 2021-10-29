@@ -39,10 +39,10 @@ class AddExpenseIntent(Intent):
         if None in (expense_value, expense_name):
             return Reply("Du måste ange både namn och pris på vad du har köpt.")
 
-        expense = Expense(price=expense_value, name=expense_name, author=author_id)
+        expense = Expense.objects.create(price=expense_value, name=expense_name, author=author_id)
         expense.save()
 
-        return Reply(f"Utgift sparad-: '{expense.name}', pris: {expense.price}:-")
+        return Reply(f"Okej, jag har antecknat det :slight_smile:")
 
 
 class GetExpensesIntent(Intent):
