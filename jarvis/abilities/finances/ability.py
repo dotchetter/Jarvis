@@ -4,7 +4,8 @@ import mongoengine
 from pyttman import settings
 from pyttman.core.ability import Ability
 
-from jarvis.abilities.finances.intents import AddExpenseIntent, GetExpensesIntent
+from jarvis.abilities.finances.intents import AddExpenseIntent, \
+    GetExpensesIntent, CalculateCompensationaryReport
 
 
 class FinanceAbility(Ability):
@@ -16,7 +17,8 @@ class FinanceAbility(Ability):
     expenses at home, to make splitting bills fair
     and square.
     """
-    intents = (AddExpenseIntent, GetExpensesIntent)
+    intents = (AddExpenseIntent, GetExpensesIntent,
+               CalculateCompensationaryReport)
 
     def configure(self) -> None:
         """

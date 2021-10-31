@@ -1,15 +1,17 @@
-from datetime import datetime, timedelta
-from typing import Union
+from datetime import datetime
+from typing import Union, Any
 
+import pandas
+import pyttman
 from mongoengine import QuerySet
-from pyttman.core.communication.models.containers import Message, Reply, ReplyStream
+from pyttman.core.communication.models.containers import Message, Reply, \
+    ReplyStream
 from pyttman.core.intent import Intent
 from pyttman.core.parsing import identifiers
 from pyttman.core.parsing.parsers import ValueParser, ChoiceParser
 
-from jarvis.abilities.finances.models import Expense
 from jarvis.abilities.finances.month import Month
-from jarvis.abilities.finances.util import get_message_author_id
+from jarvis.models import Expense, User
 
 
 class AddExpenseIntent(Intent):
@@ -25,21 +27,44 @@ class AddExpenseIntent(Intent):
 
     class EntityParser:
         expense_name = ValueParser(span=10)
+        store_for_next_month = ChoiceParser(choices=("nästa", "månad"),
+                                            multiple=True)
         expense_value = ValueParser(identifier=identifiers.IntegerIdentifier)
+        username_for_query = ValueParser(prefixes=("for", "för",
+                                                   "user", "användare"))
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
         expense_name = self.entities.get("expense_name")
         expense_value = self.entities.get("expense_value")
-        author_id = get_message_author_id(message)
+        store_for_next_month = bool(self.entities.get("store_for_next_month"))
 
-        # If authors entered a date in the expense, try and store it in the database
+        # If authors entered a date in the expense, try and store it in
+        # the database
         if None in (expense_value, expense_name):
-            return Reply("Du måste ange både namn och pris på vad du har köpt.")
+            return Reply("Du måste ange både namn och "
+                         "pris på vad du har köpt.")
 
-        expense = Expense(price=expense_value, name=expense_name, author=author_id)
-        expense.save()
+        # If the user want to register this expense for the next
+        # calendar month, add one month to the Expense.created field.
+        created_date = datetime.now()
 
-        return Reply(f"Utgift sparad-: '{expense.name}', pris: {expense.price}:-")
+        if store_for_next_month:
+            created_date += pandas.DateOffset(months=1)
+
+        username_for_query = extract_username(message, self.entities)
+
+        try:
+            user = User.get_by_alias_or_username(username_for_query).first()
+        except (IndexError, ValueError):
+            pyttman.logger.log(f"No db User matched: {username_for_query}")
+            return Reply(self.storage["default_replies"]["no_users_matches"])
+
+        Expense.objects.create(price=expense_value,
+                               expense_name=expense_name,
+                               user_reference=user,
+                               created=created_date)
+
+        return Reply(f"Utlägget sparades för {user.username.capitalize()}")
 
 
 class GetExpensesIntent(Intent):
@@ -53,11 +78,12 @@ class GetExpensesIntent(Intent):
     message.author.name.
     """
     lead = ("visa", "lista", "show", "get", "hämta")
-    trail = ("utgift", "utgifter", "expense", "expenses", "utlägg")
+    trail = ("utgift", "utgifter", "expense",
+             "expenses", "utlägg", "utgiften")
     description = "Hämta utgifter för dig, eller en annan person." \
-                  "Om du vill visa utgifter för någon annan, tagga " \
-                  "dem med '@'."
-    example = "Visa utgifter för @Simon"
+                  "Om du vill visa utgifter för någon annan, kan du " \
+                  "ange deras namn."
+    example = "Visa utgifter för Simon"
 
     class EntityParser:
         """
@@ -73,7 +99,7 @@ class GetExpensesIntent(Intent):
             Users can ask for expenses / sum of expenses for
             a certain month, which is parsed in to this entity.
 
-        :field user_id:
+        :field username_for_query:
             Users can ask for expenses / sum of expenses for
             other users than themselves, which is parsed in to
             this entity.
@@ -81,8 +107,10 @@ class GetExpensesIntent(Intent):
         sum_expenses = ChoiceParser(choices=("sum", "summa", "summera",
                                              "summerade", "summed", "totalt",
                                              "totala", "total"))
+        show_most_recent_expense = ChoiceParser(choices=("senaste",))
         month = ChoiceParser(choices=tuple(i.name for i in Month))
-        user_id = ValueParser(prefixes=("for", "för"))
+        username_for_query = ValueParser(prefixes=("for", "för", "user",
+                                                   "användare"))
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
         """
@@ -93,51 +121,77 @@ class GetExpensesIntent(Intent):
         :param message:
         :return:
         """
-        pretty_expenses = []
-        date_format = "%y-%m-%d"
-        query_year = datetime.now().year
+        username_for_query = extract_username(message, self.entities)
 
         try:
-            query_month: int = Month[self.entities["month"]].value
-        except KeyError:
-            query_month: int = datetime.now().month
+            user = User.get_by_alias_or_username(username_for_query).first()
+        except (IndexError, ValueError):
+            pyttman.logger.log(f"No db User matched: {username_for_query}")
+            return Reply(self.storage["default_replies"]["no_users_matches"])
 
-        # Filter the query on the selected month, of current year
-        query_month_name = Month(query_month).name
-        query_datetime_from = datetime(year=query_year, month=query_month, day=1)
-        query_datetime_to = datetime(year=query_year, month=query_month + 1, day=1)
-        query_datetime_to -= timedelta(days=1)
+        expenses: QuerySet = Expense.get_expenses_for_period_and_user(
+            month_for_query=self.entities.get("month"),
+            user=user)
 
-        # Default to message.author.id unless provided as an entity
-        try:
-            user_id = int(self.entities.get("user_id"))
-        except (ValueError, TypeError):
-            # Parsed value could not typecast to int or is None
-            user_id = message.author.id
+        if self.entities.get("show_most_recent_expense"):
+            return Reply(Expense.objects.filter(user_reference=user).latest())
 
-        query_result: QuerySet = Expense.objects.filter(author=user_id,
-                                                        created__gte=query_datetime_from,
-                                                        created__lte=query_datetime_to)
-        if not query_result:
+        if not expenses:
             return Reply(self.storage["default_replies"]["no_expenses_matched"])
 
         # The user wanted a sum of their expenses
+        month_name: str = Month(expenses.first().created.month).name.capitalize()
+
         if self.entities.get("sum_expenses"):
-            return Reply(f"Summan för {query_month_name} "
-                         f"är **{query_result.sum('price')}**:-")
+            expenses_sum = expenses.sum("price")
 
-        for expense in query_result:
-            pretty_expenses.append(f":pinched_fingers: **{expense.name}**\n"
-                                   f":money_with_wings: {expense.price}:-\n"
-                                   f":calendar: **{expense.created.strftime(date_format)}**")
-            pretty_expenses.append("-" * 20)
-        return ReplyStream(pretty_expenses)
+            return Reply(f"Summan för {user.username.capitalize()} "
+                         f"i {month_name} är hittills: **{expenses_sum}**:-")
+
+        return ReplyStream(expenses)
 
 
-class CreateSplitBillsReportIntent(Intent):
+class CalculateCompensationaryReport(Intent):
     """
-    # TODO - Write docstring
+    This intent sums up a month's expenses
+    for all users who have controbuted to the
+    shared expenses, and splits it up evenly.
     """
+    lead = ("kontera", "bokför", "beräkna")
+    trail = ("utgifter", "utlägg", "kostnader")
+    example = "Kontera utgifter"
+    description = "Beräkna ugfiter för alla användare för " \
+                  "nuvarande period. I rapporten framgår " \
+                  "om vissa har betalat mer, och hur mycket " \
+                  "dessa ska kompenseras med för att alla " \
+                  "ska ha betalat lika mycket."
+
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
-        pass
+        users_sum: dict[User, int] = {}
 
+        for user in User.objects.all():
+            expenses = Expense.get_expenses_for_period_and_user(user=user)
+            period_sum = expenses.sum("price")
+            users_sum[user] = period_sum
+
+        return Reply(users_sum)
+
+
+def extract_username(message: Message, entities: dict) -> str:
+    """
+    Extracts the appropriate username depending on whether
+        * it was mentioned in an Entity,
+        * it's accessible on message.author.id (discord)
+        * it's accessible on message.author (pyttman dev mode)
+    :param message:
+    :param entities:
+    :return: str
+    """
+    # Default to message.author.id unless provided as an entity
+    if (username_for_query := entities.get("username_for_query")) is \
+            None:
+        try:
+            username_for_query = message.author.id
+        except AttributeError:
+            username_for_query = message.author
+    return str(username_for_query)
