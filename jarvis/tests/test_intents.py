@@ -16,6 +16,6 @@ class TestAddExpenseIntent(unittest.TestCase):
         self.add_expense_intent.storage = Storage()
 
     def test_expense_is_parsed_correctly(self):
-        add_expense_message = Message("utlägg Bensin till bilen 234")
+        add_expense_message = Message("spara utlägg TEST 234")
         response = self.add_expense_intent.respond(add_expense_message)
         print(response.as_str())
