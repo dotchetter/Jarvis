@@ -20,10 +20,16 @@ class AddExpenseIntent(Intent):
     """
     lead = ("spara", "ny", "nytt", "new", "save", "store")
     trail = ("utgift", "expense", "utlägg", "purchase")
-    description = "Lägg till en utgift. Utgifter sparas personligt." \
-                  "Du kan lägga till ett datum om köpet redan har skett " \
-                  "- annars bokförs utlägget i dagens datum."
-    example = "köpt varor för veckan 250 kronor"
+    description = "Spara en ny utgift i Jarvis. Du kan ange " \
+                  "ett namn på personen som har lagt ut pengar, " \
+                  "om det inte är din egna utgift. Nämner du ingen " \
+                  "annan sparas den automatiskt för dig. " \
+                  "Om nuvarande månad redan är konterad, kan du " \
+                  "spara utgiften för nästa månad. Ange då " \
+                  "'nästa månad' i meddelandet, så hamnar utgiften " \
+                  "för nästkommande period. Ange namnet på vad du " \
+                  "har köpt och beloppet, endast heltal."
+    example = "Nytt utlägg Matvaror för veckan 250"
 
     class EntityParser:
         expense_name = ValueParser(span=10)
@@ -38,8 +44,6 @@ class AddExpenseIntent(Intent):
         expense_value = self.entities.get("expense_value")
         store_for_next_month = bool(self.entities.get("store_for_next_month"))
 
-        # If authors entered a date in the expense, try and store it in
-        # the database
         if None in (expense_value, expense_name):
             return Reply("Du måste ange både namn och "
                          "pris på vad du har köpt.")
