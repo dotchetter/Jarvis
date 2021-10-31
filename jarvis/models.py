@@ -1,3 +1,14 @@
+
+from datetime import datetime
+import mongoengine
+import pandas
+from mongoengine import EmbeddedDocument, Document, QuerySet
+from pyttman.core.communication.models.containers import Message
+
+from jarvis.abilities.finances.month import Month
+from jarvis.meta import ExpenseQuerySet
+
+
 class User(Document):
     """
     A platform-independent User for the Jarvis
@@ -30,6 +41,8 @@ class User(Document):
         elif len(user_by_alias):
             return user_by_alias
         raise ValueError("No user matched query by username or alias")
+
+
 class Expense(Document):
     """
     This model represents an Expense made by a user.
@@ -103,6 +116,7 @@ class Expense(Document):
         except KeyError:
             query_month = datetime.now().month
         return query_month
+
     @staticmethod
     def get_date_range_for_query(query_month: int,
                                  periods: int = 1) -> tuple[datetime.date,
@@ -147,3 +161,22 @@ class Expense(Document):
         start_date += pandas.DateOffset(days=1)
         return start_date, end_date
 
+
+class Ingredient(EmbeddedDocument):
+    """
+    Ingredient model used when creating shopping
+    lists. Ingredients are Embedded under ShoppingList
+    instances.
+    """
+    name = mongoengine.StringField(max_length=128, required=True)
+
+
+class ShoppingList(Document):
+    """
+    Model representing a shopping list.
+    The Shopping list contains a list of
+    Ingredient instances which compound
+    a shopping list.
+    """
+    ingredients = mongoengine.ListField(mongoengine
+                                        .EmbeddedDocumentField(Ingredient))
