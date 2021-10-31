@@ -70,3 +70,22 @@ class Expense(Document):
         start_date, end_date = Expense.get_date_range_for_query(query_month)
         return Expense.objects.filter(created__gte=start_date,
                                       created__lte=end_date)
+
+    @staticmethod
+    def get_expenses_for_period_and_user(user: User,
+                                         month_for_query: str = None) -> QuerySet:
+        """
+        Returns Expense instances for given user
+        recorded in the given month.
+
+        :param user: User owning the Expense documents
+        :param month_for_query: Name of a month or None, in which case the
+                                query defaults to the current month at time
+                                of query
+        :return: QuerySet[Expense]
+        """
+        query_month = Expense.get_month_calendar_int_from_name(month_for_query)
+        start_date, end_date = Expense.get_date_range_for_query(query_month)
+        return Expense.objects.filter(user_reference=user,
+                                      created__gte=start_date,
+                                      created__lte=end_date)
