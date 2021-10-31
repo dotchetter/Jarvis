@@ -31,13 +31,19 @@ class FinanceAbility(Ability):
 
         mongoengine.connect(**settings.MONGO_DB_CONFIG)
 
-        # Store the date format for expenses when displayed
-        self.storage.put("date_format_for_expenses", "%y-%m-%d")
-
         # Set up a default reply when no expenses are found
         self.storage.put("default_replies",
                          {"no_expenses_matched": "Det finns inga utgifter "
-                                                 "sparade med angivna kriterier"})
+                                                 "sparade med angivna "
+                                                 "kriterier",
+
+                          "no_users_matches":    "Jag hittade ingen "
+                                                 "användare för sökningen. "
+                                                 "Om du angav ett namn, "
+                                                 "kontrollera stavningen. "
+                                                 "Om du inte angav något, "
+                                                 "kontrollera att du är "
+                                                 "registrerad."})
 
         if settings.INTERACTIVE_SHELL is True:
             import IPython
