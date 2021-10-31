@@ -89,3 +89,17 @@ class Expense(Document):
         return Expense.objects.filter(user_reference=user,
                                       created__gte=start_date,
                                       created__lte=end_date)
+
+    @staticmethod
+    def get_month_calendar_int_from_name(month_for_query) -> int:
+        """
+        Returns the calendar int of a month from
+        string, if possible - else, current month.
+        :param month_for_query:
+        :return: int
+        """
+        try:
+            query_month = Month[month_for_query].value
+        except KeyError:
+            query_month = datetime.now().month
+        return query_month
