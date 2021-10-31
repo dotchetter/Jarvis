@@ -103,3 +103,47 @@ class Expense(Document):
         except KeyError:
             query_month = datetime.now().month
         return query_month
+    @staticmethod
+    def get_date_range_for_query(query_month: int,
+                                 periods: int = 1) -> tuple[datetime.date,
+                                                            datetime.date]:
+        """
+        Returns date period range with
+        provided name of the month to query.
+        Say, the month name is "october": the range will
+        start the first day of october and end on the last.
+
+        :param periods: Amount of months to include in the range
+        :param query_month: int, calendar int of the month of interest
+        :return: tuple[datetime.date, datetime.date]
+        """
+
+        # Queries only apply for the current year.
+        query_year = datetime.now().year
+
+        # pandas.date_range is conservative; if 1 period is desired,
+        # to include the stop date of the same month, it needs to
+        # be included explicitly.
+        periods += 1
+        query_date_from = datetime(year=query_year,
+                                   month=query_month,
+                                   day=1).date()
+
+        # Adjust one month back in time for the period to
+        # render the period correctly (beginning to end of month)
+        query_date_from -= pandas.DateOffset(months=1)
+
+        # Pandas date_range with two months left, right with the rightmost
+        # one being 1 month in the future, exactly
+        timezone = datetime.utcnow().astimezone().tzinfo  # settings.TIME_ZONE
+        start_date, end_date = pandas.date_range(start=query_date_from,
+                                                 periods=periods,
+                                                 tz=timezone,
+                                                 freq="M")
+
+        # Correct for the last 24 hours hrs of the previous month; we want
+        # the start to be from 1/10 00:00:00 to 31/10 00:00:00 for example,
+        # not 31/9 00:00:00 to 31/10 00:00:00
+        start_date += pandas.DateOffset(days=1)
+        return start_date, end_date
+
