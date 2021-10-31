@@ -1,17 +1,18 @@
 import os
+from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 import certifi
 
 load_dotenv()
 
-DEV_MODE = True
+DEV_MODE = False
 
 INTERACTIVE_SHELL = False
 
 # Selection is performed in
 DB_NAME_PROD = os.getenv("MONGO_DB_NAME_PROD")
-DB_NAME_DEV = os.getenv("MONGO_DB_NAME_PROD")
+DB_NAME_DEV = os.getenv("MONGO_DB_NAME_DEV")
 
 db_name = DB_NAME_DEV if DEV_MODE else DB_NAME_PROD
 
@@ -92,3 +93,5 @@ LOG_FILE_DIR = APP_BASE_DIR / Path("logs")
 # This setting is set by pyttman-cli when you create your project.
 # Do not change it afterwards without also renaming the directory for your app.
 APP_NAME = "jarvis"
+
+TIME_ZONE = datetime.utcnow().astimezone().tzinfo
