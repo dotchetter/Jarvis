@@ -29,7 +29,12 @@ class AddExpenseIntent(Intent):
                   "'nästa månad' i meddelandet, så hamnar utgiften " \
                   "för nästkommande period. Ange namnet på vad du " \
                   "har köpt och beloppet, endast heltal."
-    example = "Nytt utlägg Matvaror för veckan 250"
+    example = "[Spara ett nytt utlägg för dig]: " \
+              "nytt utlägg Matvaror för veckan 250\n" \
+              "[Spara ett nytt utlägg för någon annan]: " \
+              "spara utgift för Simon bensin 500\n" \
+              "[Spara ett nytt utlägg för nästa period]: " \
+              "Spara utgift nästa månad Kruka till växten 249"
 
     class EntityParser:
         expense_name = ValueParser(span=10)
