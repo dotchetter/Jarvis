@@ -1,30 +1,24 @@
 import os
+from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
-
-"""
-    Welcome to the settings module! Please take a minute to read
-    this little introduction, if it's your first time here.
-    
-    If you've used Django before, this is familiar to you and 
-    you can stop reading now. If you haven't, thats okay too. 
-    
-    Everything in this file is available to you in your app 
-    through 'pyttman.settings'. You can store things here, but
-    be >>> very careful <<< not to push API tokens, 
-    passwords or other sensitive details to version control. 
-    This is why it's recommended to use .env or another form 
-    of storing these sensitive credentials in your app, and 
-    then using them here in this file with `os.getenv("my_api_token")` 
-    for example.
-"""
+import certifi
 
 load_dotenv()
 
 DEV_MODE = False
 
+INTERACTIVE_SHELL = False
+
+# Selection is performed in
+DB_NAME_PROD = os.getenv("MONGO_DB_NAME_PROD")
+DB_NAME_DEV = os.getenv("MONGO_DB_NAME_DEV")
+
+db_name = DB_NAME_DEV if DEV_MODE else DB_NAME_PROD
+
 MONGO_DB_CONFIG = {
-    "db": os.getenv("MONGO_DB_NAME"),
+    "tlsCAFile": certifi.where(),
+    "db": None,  # Configured in Ability 'Configure' hook
     "host": os.getenv("MONGO_DB_URL"),
     "username": os.getenv("MONGO_DB_USER"),
     "password": os.getenv("MONGO_DB_PASSWORD"),
@@ -54,7 +48,7 @@ MESSAGE_ROUTER = {
     # displayed for a user, if they type this word in the beginning of
     # a message. The keyword is case insensitive and has to occur as
     # first string in the message from the user.
-    "HELP_KEYWORD": "help",
+    "HELP_KEYWORD": "hjälp",
 }
 
 # Define your Ability classes here, with path starting from your project directory.
@@ -86,8 +80,8 @@ FATAL_EXCEPTION_AUTO_REPLY = "Åh nej! Något gick fel... Simon, kikar du på de
 
 CLIENT = {
     "class": "pyttman.clients.community.discord.client.DiscordClient",
-    "token": os.getenv("DISCORD_TOKEN"),
-    "guild": os.getenv("DISCORD_GUILD")
+    "token": os.getenv("DISCORD_TOKEN_DEV") if DEV_MODE else os.getenv("DISCORD_TOKEN_PROD"),
+    "guild": os.getenv("DISCORD_GUILD_DEV") if DEV_MODE else os.getenv("DISCORD_GUILD_PROD"),
 }
 
 # No need to change this setting
@@ -99,3 +93,5 @@ LOG_FILE_DIR = APP_BASE_DIR / Path("logs")
 # This setting is set by pyttman-cli when you create your project.
 # Do not change it afterwards without also renaming the directory for your app.
 APP_NAME = "jarvis"
+
+TIME_ZONE = datetime.utcnow().astimezone().tzinfo
