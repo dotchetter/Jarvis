@@ -30,5 +30,28 @@ class User(Document):
         elif len(user_by_alias):
             return user_by_alias
         raise ValueError("No user matched query by username or alias")
+class Expense(Document):
+    """
+    This model represents an Expense made by a user.
+    The expense is stored for the user who recorded it
+    and tracks its name and price. Timestamp of purchase
+    in the field 'created' defaults to time of instantiation.
     """
     output_date_format = "%y-%m-%d"
+    expense_name = mongoengine.StringField(required=True, max_length=200)
+    user_reference = mongoengine.ReferenceField(User, required=True)
+    price = mongoengine.IntField(required=True, min_value=0)
+    created = mongoengine.DateField(default=datetime.now())
+
+    meta = {"queryset_class": ExpenseQuerySet}
+
+    def __str__(self):
+        """
+        UI friendly string, for easy visualization in chat.
+        :return: str
+        """
+        sep = "\n" + ("-" * 20) + "\n"
+        name = f":pinched_fingers: **{self.expense_name}**\n"
+        price = f":money_with_wings: {self.price}:-\n"
+        date = f":calendar: **{self.created.strftime(self.output_date_format)}**"
+        return name + price + date + sep
