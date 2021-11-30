@@ -56,6 +56,7 @@ class Expense(Document):
     user_reference = mongoengine.ReferenceField(User, required=True)
     price = mongoengine.IntField(required=True, min_value=0)
     created = mongoengine.DateField(default=datetime.now())
+    account_for = mongoengine.DateField(default=datetime.now())
 
     meta = {"queryset_class": ExpenseQuerySet}
 
