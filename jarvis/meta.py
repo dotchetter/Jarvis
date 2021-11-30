@@ -12,3 +12,16 @@ class ExpenseQuerySet(QuerySet):
         :return:
         """
         return self.order_by("-created", ).first()
+
+
+class UserQuerySet(QuerySet):
+    """
+    Custom metaclass for User queries
+    """
+    def from_alias(self, alias: str):
+        """
+        Get a User instance by it's alias, if applicable.
+        :param alias: str, user alias
+        :return: User | None
+        """
+        return self.filter(aliases__icontains=alias)
