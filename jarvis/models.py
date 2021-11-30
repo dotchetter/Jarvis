@@ -6,7 +6,7 @@ from mongoengine import EmbeddedDocument, Document, QuerySet
 from pyttman.core.communication.models.containers import Message
 
 from jarvis.abilities.finances.month import Month
-from jarvis.meta import ExpenseQuerySet
+from jarvis.meta import ExpenseQuerySet, UserQuerySet
 
 
 class User(Document):
