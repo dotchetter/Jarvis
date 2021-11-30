@@ -160,10 +160,10 @@ class GetExpensesIntent(Intent):
         return ReplyStream(expenses)
 
 
-class CalculateCompensationaryReport(Intent):
+class CalculateSplitExpenses(Intent):
     """
     This intent sums up a month's expenses
-    for all users who have controbuted to the
+    for all users who have contributed to the
     shared expenses, and splits it up evenly.
     """
     lead = ("kontera", "bokför", "beräkna")

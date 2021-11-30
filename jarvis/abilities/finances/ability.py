@@ -5,7 +5,7 @@ from pyttman import settings
 from pyttman.core.ability import Ability
 
 from jarvis.abilities.finances.intents import AddExpenseIntent, \
-    GetExpensesIntent, CalculateCompensationaryReport
+    GetExpensesIntent, CalculateSplitExpenses
 
 
 class FinanceAbility(Ability):
@@ -18,7 +18,7 @@ class FinanceAbility(Ability):
     and square.
     """
     intents = (AddExpenseIntent, GetExpensesIntent,
-               CalculateCompensationaryReport)
+               CalculateSplitExpenses)
 
     def configure(self) -> None:
         """
