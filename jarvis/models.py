@@ -19,6 +19,7 @@ class User(Document):
     """
     username = mongoengine.StringField(required=True)
     aliases = mongoengine.ListField(mongoengine.DynamicField())
+    meta = {"queryset_class": UserQuerySet}
 
     @staticmethod
     def get_by_alias_or_username(alias_or_username: str) -> QuerySet:
