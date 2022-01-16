@@ -1,1 +1,1 @@
-web: pyttman runclient jarvis
+worker: pyttman runclient jarvis
