@@ -6,21 +6,13 @@ administrative intents in Jarvis.
 Administrative intents include creating
 database entries, changing settings, etc.
 """
-from types import Union
 
-from pyttman.core.communication.models.containers import Message, Reply, ReplyStream
-from pyttman.core.intent import Intent
+from pyttman.core.ability import Ability
+from jarvis.abilities.administrative.intents import *
 
 
-class CreateUserIntent(Intent):
+class AdministrativeAbility(Ability):
     """
-    The intent creates a database User instance
-    for the provided data in message.author.
-
-    Since platforms represent users differently,
-    this uses whichever unique identifier provided
-    by the platform and associates the identifier
-    with the user.
+    Ability class for administrative intents in Jarvis
     """
-    def respond(self, message: Message) -> Union[Reply, ReplyStream]:
-        pass
+    intents = (DevInfo,)

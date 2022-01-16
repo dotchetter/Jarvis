@@ -6,7 +6,7 @@ from mongoengine import EmbeddedDocument, Document, QuerySet
 from pyttman.core.communication.models.containers import Message
 
 from jarvis.abilities.finances.month import Month
-from jarvis.meta import ExpenseQuerySet
+from jarvis.meta import ExpenseQuerySet, UserQuerySet
 
 
 class User(Document):
@@ -19,6 +19,7 @@ class User(Document):
     """
     username = mongoengine.StringField(required=True)
     aliases = mongoengine.ListField(mongoengine.DynamicField())
+    meta = {"queryset_class": UserQuerySet}
 
     @staticmethod
     def get_by_alias_or_username(alias_or_username: str) -> QuerySet:
@@ -55,6 +56,7 @@ class Expense(Document):
     user_reference = mongoengine.ReferenceField(User, required=True)
     price = mongoengine.IntField(required=True, min_value=0)
     created = mongoengine.DateField(default=datetime.now())
+    account_for = mongoengine.DateField(default=datetime.now())
 
     meta = {"queryset_class": ExpenseQuerySet}
 

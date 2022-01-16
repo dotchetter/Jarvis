@@ -20,10 +20,21 @@ class AddExpenseIntent(Intent):
     """
     lead = ("spara", "ny", "nytt", "new", "save", "store")
     trail = ("utgift", "expense", "utlägg", "purchase")
-    description = "Lägg till en utgift. Utgifter sparas personligt." \
-                  "Du kan lägga till ett datum om köpet redan har skett " \
-                  "- annars bokförs utlägget i dagens datum."
-    example = "köpt varor för veckan 250 kronor"
+    description = "Spara en ny utgift i Jarvis. Du kan ange " \
+                  "ett namn på personen som har lagt ut pengar, " \
+                  "om det inte är din egna utgift. Nämner du ingen " \
+                  "annan sparas den automatiskt för dig. " \
+                  "Om nuvarande månad redan är konterad, kan du " \
+                  "spara utgiften för nästa månad. Ange då " \
+                  "'nästa månad' i meddelandet, så hamnar utgiften " \
+                  "för nästkommande period. Ange namnet på vad du " \
+                  "har köpt och beloppet, endast heltal."
+    example = "[Spara ett nytt utlägg för dig]: " \
+              "nytt utlägg Matvaror för veckan 250\n" \
+              "[Spara ett nytt utlägg för någon annan]: " \
+              "spara utgift för Simon bensin 500\n" \
+              "[Spara ett nytt utlägg för nästa period]: " \
+              "Spara utgift nästa månad Kruka till växten 249"
 
     class EntityParser:
         expense_name = ValueParser(span=10)
@@ -34,12 +45,10 @@ class AddExpenseIntent(Intent):
                                                    "user", "användare"))
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
-        expense_name = self.entities.get("expense_name")
-        expense_value = self.entities.get("expense_value")
-        store_for_next_month = bool(self.entities.get("store_for_next_month"))
+        expense_name = message.entities.get("expense_name")
+        expense_value = message.entities.get("expense_value")
+        for_next_month = bool(message.entities.get("store_for_next_month"))
 
-        # If authors entered a date in the expense, try and store it in
-        # the database
         if None in (expense_value, expense_name):
             return Reply("Du måste ange både namn och "
                          "pris på vad du har köpt.")
@@ -48,10 +57,10 @@ class AddExpenseIntent(Intent):
         # calendar month, add one month to the Expense.created field.
         created_date = datetime.now()
 
-        if store_for_next_month:
+        if for_next_month:
             created_date += pandas.DateOffset(months=1)
 
-        username_for_query = extract_username(message, self.entities)
+        username_for_query = extract_username(message)
 
         try:
             user = User.get_by_alias_or_username(username_for_query).first()
@@ -59,8 +68,8 @@ class AddExpenseIntent(Intent):
             pyttman.logger.log(f"No db User matched: {username_for_query}")
             return Reply(self.storage["default_replies"]["no_users_matches"])
 
-        Expense.objects.create(price=expense_value,
-                               expense_name=expense_name,
+        Expense.objects.create(price=expense_value.value,
+                               expense_name=expense_name.value,
                                user_reference=user,
                                created=created_date)
 
@@ -121,7 +130,7 @@ class GetExpensesIntent(Intent):
         :param message:
         :return:
         """
-        username_for_query = extract_username(message, self.entities)
+        username_for_query = extract_username(message)
 
         try:
             user = User.get_by_alias_or_username(username_for_query).first()
@@ -129,11 +138,16 @@ class GetExpensesIntent(Intent):
             pyttman.logger.log(f"No db User matched: {username_for_query}")
             return Reply(self.storage["default_replies"]["no_users_matches"])
 
+        try:
+            month_for_query = message.entities.get("month").value
+        except AttributeError:
+            month_for_query = None
+
         expenses: QuerySet = Expense.get_expenses_for_period_and_user(
-            month_for_query=self.entities.get("month"),
+            month_for_query=month_for_query,
             user=user)
 
-        if self.entities.get("show_most_recent_expense"):
+        if message.entities.get("show_most_recent_expense"):
             return Reply(Expense.objects.filter(user_reference=user).latest())
 
         if not expenses:
@@ -142,7 +156,7 @@ class GetExpensesIntent(Intent):
         # The user wanted a sum of their expenses
         month_name: str = Month(expenses.first().created.month).name.capitalize()
 
-        if self.entities.get("sum_expenses"):
+        if message.entities.get("sum_expenses"):
             expenses_sum = expenses.sum("price")
 
             return Reply(f"Summan för {user.username.capitalize()} "
@@ -151,10 +165,10 @@ class GetExpensesIntent(Intent):
         return ReplyStream(expenses)
 
 
-class CalculateCompensationaryReport(Intent):
+class CalculateSplitExpenses(Intent):
     """
     This intent sums up a month's expenses
-    for all users who have controbuted to the
+    for all users who have contributed to the
     shared expenses, and splits it up evenly.
     """
     lead = ("kontera", "bokför", "beräkna")
@@ -177,21 +191,22 @@ class CalculateCompensationaryReport(Intent):
         return Reply(users_sum)
 
 
-def extract_username(message: Message, entities: dict) -> str:
+def extract_username(message: Message) -> str:
     """
     Extracts the appropriate username depending on whether
         * it was mentioned in an Entity,
         * it's accessible on message.author.id (discord)
         * it's accessible on message.author (pyttman dev mode)
     :param message:
-    :param entities:
     :return: str
     """
     # Default to message.author.id unless provided as an entity
-    if (username_for_query := entities.get("username_for_query")) is \
-            None:
+    if (username_for_query := message.entities.get(
+            "username_for_query")) is None:
         try:
             username_for_query = message.author.id
         except AttributeError:
             username_for_query = message.author
+    else:
+        username_for_query = username_for_query.value
     return str(username_for_query)
