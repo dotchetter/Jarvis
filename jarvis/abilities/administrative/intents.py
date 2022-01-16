@@ -3,12 +3,17 @@ from pyttman.core.communication.models.containers import Message, Reply
 from pyttman.core.intent import Intent
 
 
-class DBInfo(Intent):
+class DevInfo(Intent):
     """
-    Returns info about the database being used.
+    Returns info about the environment which Jarvis is runnign in.
     """
-    lead = ("vilken", "which")
-    trail = ("databas", "db")
+    lead = ("berätta",)
+    trail = ("dig",)
 
     def respond(self, message: Message) -> Reply:
-        return Reply(pyttman.settings.db_name)
+        return Reply(f"Databas: {pyttman.settings.db_name}\n"
+                     f"Scheduler threads: "
+                     f"{len(list(pyttman.schedule.get_jobs()))}\n"
+                     f"Pyttman version: {pyttman.__version__}\n"
+                     f"Dev mode: {pyttman.settings.DEV_MODE}")
+

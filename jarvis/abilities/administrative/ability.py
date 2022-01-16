@@ -8,11 +8,11 @@ database entries, changing settings, etc.
 """
 
 from pyttman.core.ability import Ability
-from jarvis.abilities.administrative.intents import DBInfo
+from jarvis.abilities.administrative.intents import *
 
 
 class AdministrativeAbility(Ability):
     """
     Ability class for administrative intents in Jarvis
     """
-    intents = (DBInfo,)
+    intents = (DevInfo,)
