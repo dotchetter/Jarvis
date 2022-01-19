@@ -11,7 +11,7 @@ class ExpenseQuerySet(QuerySet):
         Returns the most recently recorded Expense.
         :return:
         """
-        return self.order_by("-created", ).first()
+        return self.order_by("-created").first()
 
 
 class UserQuerySet(QuerySet):

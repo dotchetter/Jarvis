@@ -34,7 +34,8 @@ class User(Document):
         # Casefold and truncate any special characters
         alias_or_username = Message(alias_or_username).sanitized_content().pop()
         user_by_username = User.objects.filter(username=alias_or_username)
-        user_by_alias = User.objects.filter(aliases__icontains=alias_or_username)
+        user_by_alias = User.objects.filter(
+            aliases__icontains=alias_or_username)
 
         # Always prioritize username since it's a direct lookup
         if len(user_by_username):
@@ -51,12 +52,14 @@ class Expense(Document):
     and tracks its name and price. Timestamp of purchase
     in the field 'created' defaults to time of instantiation.
     """
-    output_date_format = "%y-%m-%d"
+    output_date_format = "%y-%m-%d %H:%M"
     expense_name = mongoengine.StringField(required=True, max_length=200)
     user_reference = mongoengine.ReferenceField(User, required=True)
     price = mongoengine.IntField(required=True, min_value=0)
-    created = mongoengine.DateField(default=datetime.now())
-    account_for = mongoengine.DateField(default=datetime.now())
+    created = mongoengine.DateTimeField(default=datetime.now())
+    account_for = mongoengine.DateField(default=None)
+    name = mongoengine.StringField(required=False)
+    author = mongoengine.StringField(required=False)
 
     meta = {"queryset_class": ExpenseQuerySet}
 
@@ -68,8 +71,13 @@ class Expense(Document):
         sep = "\n" + ("-" * 20) + "\n"
         name = f":pinched_fingers: **{self.expense_name}**\n"
         price = f":money_with_wings: {self.price}:-\n"
-        date = f":calendar: **{self.created.strftime(self.output_date_format)}**"
-        return name + price + date + sep
+
+        account_month = Month(self.account_for.month).name.capitalize()
+        year = self.account_for.year
+        account_month = f":calendar: **{account_month} {year}**\n"
+        created_date = self.created.strftime(self.output_date_format)
+        created_date = f":clock: **{created_date}**\n"
+        return name + price + created_date + account_month + sep
 
     @staticmethod
     def get_expenses_for_period_all_users(month_for_query: str = None) -> QuerySet:
@@ -83,8 +91,8 @@ class Expense(Document):
         """
         query_month = Expense.get_month_calendar_int_from_name(month_for_query)
         start_date, end_date = Expense.get_date_range_for_query(query_month)
-        return Expense.objects.filter(created__gte=start_date,
-                                      created__lte=end_date)
+        return Expense.objects.filter(account_for__gte=start_date.month,
+                                      account_for__lte=end_date.month)
 
     @staticmethod
     def get_expenses_for_period_and_user(user: User,
@@ -102,8 +110,8 @@ class Expense(Document):
         query_month = Expense.get_month_calendar_int_from_name(month_for_query)
         start_date, end_date = Expense.get_date_range_for_query(query_month)
         return Expense.objects.filter(user_reference=user,
-                                      created__gte=start_date,
-                                      created__lte=end_date)
+                                      account_for__gte=start_date,
+                                      account_for__lte=end_date)
 
     @staticmethod
     def get_month_calendar_int_from_name(month_for_query) -> int:
