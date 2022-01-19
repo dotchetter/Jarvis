@@ -55,10 +55,10 @@ class AddExpenseIntent(Intent):
 
         # If the user want to register this expense for the next
         # calendar month, add one month to the Expense.created field.
-        created_date = datetime.now()
+        account_for_date = datetime.now()
 
         if for_next_month:
-            created_date += pandas.DateOffset(months=1)
+            account_for_date += pandas.DateOffset(months=1)
 
         username_for_query = extract_username(message)
 
@@ -71,7 +71,8 @@ class AddExpenseIntent(Intent):
         Expense.objects.create(price=expense_value.value,
                                expense_name=expense_name.value,
                                user_reference=user,
-                               created=created_date)
+                               created=datetime.now(),
+                               account_for=account_for_date)
 
         return Reply(f"Utlägget sparades för {user.username.capitalize()}")
 
