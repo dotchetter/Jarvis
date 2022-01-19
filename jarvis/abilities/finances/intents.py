@@ -148,7 +148,10 @@ class GetExpensesIntent(Intent):
             user=user)
 
         if message.entities.get("show_most_recent_expense"):
-            return Reply(Expense.objects.filter(user_reference=user).latest())
+            latest_expense = Expense.objects.filter(
+                user_reference=user
+            ).latest()
+            return Reply(latest_expense)
 
         if not expenses:
             return Reply(self.storage["default_replies"]["no_expenses_matched"])

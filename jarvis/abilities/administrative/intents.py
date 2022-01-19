@@ -11,7 +11,8 @@ class DevInfo(Intent):
     trail = ("dig",)
 
     def respond(self, message: Message) -> Reply:
-        return Reply(f"Databas: {pyttman.settings.db_name}\n"
+        return Reply(f"Version: {pyttman.settings.APP_VERSION}\n"
+                     f"db: {pyttman.settings.db_name}\n"
                      f"Scheduler threads: "
                      f"{len(list(pyttman.schedule.get_jobs()))}\n"
                      f"Pyttman version: {pyttman.__version__}\n"
