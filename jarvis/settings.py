@@ -51,7 +51,7 @@ MESSAGE_ROUTER = {
 }
 
 ABILITIES = [
-    "jarvis.abilities.finances.ability.FinanceAbility",
+    "jarvis.abilities.finance.ability.FinanceAbility",
     "jarvis.abilities.administrative.ability.AdministrativeAbility"
 ]
 
@@ -73,5 +73,5 @@ LOG_FILE_DIR = APP_BASE_DIR / Path("logs")
 # This setting is set by pyttman-cli when you create your project.
 # Do not change it afterwards without also renaming the directory for your app.
 APP_NAME = "jarvis"
-APP_VERSION = "1.0.3"
+APP_VERSION = "1.0.4"
 TIME_ZONE = datetime.utcnow().astimezone().tzinfo
