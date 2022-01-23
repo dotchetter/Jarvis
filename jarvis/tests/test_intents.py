@@ -6,7 +6,7 @@ import pyttman
 from pyttman.core.communication.models.containers import Message
 from pyttman.core.storage.basestorage import Storage
 
-from jarvis.abilities.finances.intents import AddExpenseIntent
+from jarvis.abilities.finance.intents import AddExpenseIntent
 
 
 class TestAddExpenseIntent(unittest.TestCase):
