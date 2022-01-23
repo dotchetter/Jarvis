@@ -10,8 +10,10 @@ from pyttman.core.intent import Intent
 from pyttman.core.parsing import identifiers
 from pyttman.core.parsing.parsers import ValueParser, ChoiceParser
 
-from jarvis.abilities.finances.month import Month
-from jarvis.models import Expense, User
+from jarvis.abilities.finance.helpers import SharedExpensesApp
+from jarvis.abilities.finance.month import Month
+from jarvis.abilities.administrative.models import User
+from jarvis.abilities.finance.models import Expense
 
 
 class AddExpenseIntent(Intent):
@@ -175,7 +177,7 @@ class CalculateSplitExpenses(Intent):
     for all users who have contributed to the
     shared expenses, and splits it up evenly.
     """
-    lead = ("kontera", "bokför", "beräkna")
+    lead = ("kontera", "bokför", "beräkna", "splitta", "dela")
     trail = ("utgifter", "utlägg", "kostnader")
     example = "Kontera utgifter"
     description = "Beräkna ugfiter för alla användare för " \
@@ -185,14 +187,20 @@ class CalculateSplitExpenses(Intent):
                   "ska ha betalat lika mycket."
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
-        users_sum: dict[User, int] = {}
+        buckets = SharedExpensesApp.calculate_split()
+        top_paying = buckets.pop()
+        output = [f"**{top_paying.user.username.capitalize()}** "
+                  f"har betalat mest denna månad med en total av "
+                  f"**{top_paying.paid_amount}:-** hittills.\n"]
 
-        for user in User.objects.all():
-            expenses = Expense.get_expenses_for_period_and_user(user=user)
-            period_sum = expenses.sum("price")
-            users_sum[user] = period_sum
+        while buckets:
+            bucket = buckets.pop()
+            output.append(f"{bucket.user.username.capitalize()} har betalat "
+                          f"**{bucket.paid_amount}:-**, och ska kompensera "
+                          f"{top_paying.user.username.capitalize()} med "
+                          f"**{bucket.debt}:-**.")
 
-        return Reply(users_sum)
+        return ReplyStream(output)
 
 
 def extract_username(message: Message) -> str:
