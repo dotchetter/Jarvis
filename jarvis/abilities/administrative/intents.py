@@ -10,7 +10,7 @@ from jarvis.abilities.finance.models import Expense
 
 class DevInfo(Intent):
     """
-    Returns info about the environment which Jarvis is runnign in.
+    Returns info about the environment which Jarvis is running in.
     """
     lead = ("berätta",)
     trail = ("dig",)
