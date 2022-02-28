@@ -25,28 +25,15 @@ MONGO_DB_CONFIG = {
     "port": int(os.getenv("MONGO_DB_PORT"))
 }
 
-# Create a new log file for each time your app starts, or append the most recent one.
 APPEND_LOG_FILES = True
 
-# Configure the behavior of the MessageRouter here
 MESSAGE_ROUTER = {
 
-    # The MessageRouter routes messages to your app's Intent classes.
-    # To see the available classes and choose on that fits your app,
-    # check out the documentation on GitHub.
     "ROUTER_CLASS": "pyttman.core.parsing.routing.FirstMatchingRouter",
 
-    # Define a collection of strings to return to the user if no command matched
-    # the user's message. One is randomly chosen by the Router and returned to
-    # the user.
     "COMMAND_UNKNOWN_RESPONSES": [
         "Ursäkta, jag förstår inte?",
     ],
-
-    # Define the keyword for Pyttman's auto-generated help pages to be
-    # displayed for a user, if they type this word in the beginning of
-    # a message. The keyword is case insensitive and has to occur as
-    # first string in the message from the user.
     "HELP_KEYWORD": "hjälp",
 }
 
@@ -64,14 +51,11 @@ CLIENT = {
     "guild": os.getenv("DISCORD_GUILD_DEV") if DEV_MODE else os.getenv("DISCORD_GUILD_PROD"),
 }
 
-# No need to change this setting
 APP_BASE_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
 
-# No need to change this setting
 LOG_FILE_DIR = APP_BASE_DIR / Path("logs")
 
-# This setting is set by pyttman-cli when you create your project.
-# Do not change it afterwards without also renaming the directory for your app.
+
 APP_NAME = "jarvis"
-APP_VERSION = "1.0.4"
+APP_VERSION = "1.0.5"
 TIME_ZONE = datetime.utcnow().astimezone().tzinfo
