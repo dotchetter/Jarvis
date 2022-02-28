@@ -1,19 +1,19 @@
 from datetime import datetime
-from typing import Union, Any
+from typing import Union
 
 import pandas
 import pyttman
 from mongoengine import QuerySet
 from pyttman.core.communication.models.containers import Message, Reply, \
     ReplyStream
+from pyttman.core.entity_parsing import identifiers
+from pyttman.core.entity_parsing.fields import TextEntityField, BoolEntityField
 from pyttman.core.intent import Intent
-from pyttman.core.parsing import identifiers
-from pyttman.core.parsing.parsers import ValueParser, ChoiceParser
 
-from jarvis.abilities.finance.helpers import SharedExpensesApp
-from jarvis.abilities.finance.month import Month
 from jarvis.abilities.administrative.models import User
+from jarvis.abilities.finance.helpers import SharedExpensesApp
 from jarvis.abilities.finance.models import Expense
+from jarvis.abilities.finance.month import Month
 
 
 class AddExpenseIntent(Intent):
@@ -39,17 +39,17 @@ class AddExpenseIntent(Intent):
               "Spara utgift nästa månad Kruka till växten 249"
 
     class EntityParser:
-        expense_name = ValueParser(span=10)
-        store_for_next_month = ChoiceParser(choices=("nästa", "månad"),
-                                            multiple=True)
-        expense_value = ValueParser(identifier=identifiers.IntegerIdentifier)
-        username_for_query = ValueParser(prefixes=("for", "för",
-                                                   "user", "användare"))
+        expense_name = TextEntityField(span=10)
+        store_for_next_month = BoolEntityField(message_contains=("nästa",
+                                                                 "månad"))
+        expense_value = TextEntityField(identifier=identifiers.NumberIdentifier)
+        username_for_query = TextEntityField(prefixes=("for", "för",
+                                                       "user", "användare"))
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
         expense_name = message.entities.get("expense_name")
         expense_value = message.entities.get("expense_value")
-        for_next_month = bool(message.entities.get("store_for_next_month"))
+        for_next_month = message.entities.get("store_for_next_month")
 
         if None in (expense_value, expense_name):
             return Reply("Du måste ange både namn och "
@@ -70,8 +70,8 @@ class AddExpenseIntent(Intent):
             pyttman.logger.log(f"No db User matched: {username_for_query}")
             return Reply(self.storage["default_replies"]["no_users_matches"])
 
-        Expense.objects.create(price=expense_value.value,
-                               expense_name=expense_name.value,
+        Expense.objects.create(price=expense_value,
+                               expense_name=expense_name,
                                user_reference=user,
                                created=datetime.now(),
                                account_for=account_for_date)
@@ -116,13 +116,14 @@ class GetExpensesIntent(Intent):
             other users than themselves, which is parsed in to
             this entity.
         """
-        sum_expenses = ChoiceParser(choices=("sum", "summa", "summera",
-                                             "summerade", "summed", "totalt",
-                                             "totala", "total"))
-        show_most_recent_expense = ChoiceParser(choices=("senaste",))
-        month = ChoiceParser(choices=tuple(i.name for i in Month))
-        username_for_query = ValueParser(prefixes=("for", "för", "user",
-                                                   "användare"))
+        sum_expenses = BoolEntityField(message_contains=("sum", "summa",
+                                                         "summera", "summerade",
+                                                         "summed", "totalt",
+                                                         "totala", "total"))
+        show_most_recent_expense = BoolEntityField(message_contains=("senaste",))
+        month = TextEntityField(valid_strings=tuple(i.name for i in Month))
+        username_for_query = TextEntityField(prefixes=("for", "för", "user",
+                                                       "användare"))
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
         """
@@ -142,7 +143,7 @@ class GetExpensesIntent(Intent):
             return Reply(self.storage["default_replies"]["no_users_matches"])
 
         try:
-            month_for_query = message.entities.get("month").value
+            month_for_query = message.entities.get("month")
         except AttributeError:
             month_for_query = None
 
@@ -150,7 +151,7 @@ class GetExpensesIntent(Intent):
             month_for_query=month_for_query,
             user=user)
 
-        if message.entities.get("show_most_recent_expense"):
+        if message.entities.get("show_most_recent_expense") is True:
             latest_expense = Expense.objects.filter(
                 user_reference=user
             ).latest()
@@ -219,6 +220,4 @@ def extract_username(message: Message) -> str:
             username_for_query = message.author.id
         except AttributeError:
             username_for_query = message.author
-    else:
-        username_for_query = username_for_query.value
     return str(username_for_query)
