@@ -42,7 +42,8 @@ ABILITIES = [
     "jarvis.abilities.administrative.ability.AdministrativeAbility"
 ]
 
-FATAL_EXCEPTION_AUTO_REPLY = "Åh nej! Något gick fel... Simon, kikar du på detta:"
+FATAL_EXCEPTION_AUTO_REPLY = "Åh nej! Något gick fel. Försök igen om en " \
+                             "liten stund."
 
 
 CLIENT = {
