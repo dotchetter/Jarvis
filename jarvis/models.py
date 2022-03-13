@@ -1,22 +1,12 @@
 import mongoengine
-from mongoengine import EmbeddedDocument, Document
+from mongoengine import Document
 
 
-class Ingredient(EmbeddedDocument):
+class AppEnrollment(Document):
     """
-    Ingredient model used when creating shopping
-    lists. Ingredients are Embedded under ShoppingList
-    instances.
+    Embedded document, representing app names provided
+    in Jarvis, allowing users to enroll and/or de-enroll from
+    certain optional functionality in Jarvis.
     """
-    name = mongoengine.StringField(max_length=128, required=True)
-
-
-class ShoppingList(Document):
-    """
-    Model representing a shopping list.
-    The Shopping list contains a list of
-    Ingredient instances which compound
-    a shopping list.
-    """
-    ingredients = mongoengine.ListField(mongoengine
-                                        .EmbeddedDocumentField(Ingredient))
+    shared_expenses = mongoengine.BooleanField(default=False)
+    workshift = mongoengine.BooleanField(default=False)
