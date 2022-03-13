@@ -42,7 +42,8 @@ ABILITIES = [
     "jarvis.abilities.administrative.ability.AdministrativeAbility"
 ]
 
-FATAL_EXCEPTION_AUTO_REPLY = "Åh nej! Något gick fel... Simon, kikar du på detta:"
+FATAL_EXCEPTION_AUTO_REPLY = "Åh nej! Något gick fel. Försök igen om en " \
+                             "liten stund."
 
 
 CLIENT = {
@@ -57,5 +58,5 @@ LOG_FILE_DIR = APP_BASE_DIR / Path("logs")
 
 LOG_TO_STDOUT = True
 APP_NAME = "jarvis"
-APP_VERSION = "1.0.6"
+APP_VERSION = "1.0.7"
 TIME_ZONE = datetime.utcnow().astimezone().tzinfo
