@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Union
+from typing import Union, Any
 
 import pandas
 import pyttman
@@ -7,13 +7,28 @@ from mongoengine import QuerySet
 from pyttman.core.communication.models.containers import Message, Reply, \
     ReplyStream
 from pyttman.core.entity_parsing import identifiers
-from pyttman.core.entity_parsing.fields import TextEntityField, BoolEntityField
+from pyttman.core.entity_parsing.fields import TextEntityField, \
+    BoolEntityField, IntegerEntityField, EntityFieldBase
+from pyttman.core.entity_parsing.identifiers import IntegerIdentifier
 from pyttman.core.intent import Intent
 
 from jarvis.abilities.administrative.models import User
 from jarvis.abilities.finance.helpers import SharedExpensesApp
 from jarvis.abilities.finance.models import Expense
 from jarvis.abilities.finance.month import Month
+
+
+class CustomIntegerEntityField(EntityFieldBase):
+    """
+    IntegerEntityField classes specialize in finding numbers.
+    The value output type from this EntityField is <int>.
+    """
+    type_cls = int
+    identifier_cls = IntegerIdentifier
+
+    @classmethod
+    def perform_type_conversion(cls, value: str) -> Any:
+        return cls.type_cls("".join(i for i in value if i.isdigit()))
 
 
 class AddExpenseIntent(Intent):
@@ -42,7 +57,7 @@ class AddExpenseIntent(Intent):
         expense_name = TextEntityField(span=10)
         store_for_next_month = BoolEntityField(message_contains=("nästa",
                                                                  "månad"))
-        expense_value = TextEntityField(identifier=identifiers.NumberIdentifier)
+        expense_value = CustomIntegerEntityField()
         username_for_query = TextEntityField(prefixes=("for", "för",
                                                        "user", "användare"))
 
