@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
-from jarvis.abilities.administrative.models import User, AppEnrollment
+from jarvis.abilities.administrative.models import User
+from jarvis.models import AppEnrollment
 from jarvis.abilities.finance.models import Expense
 
 
