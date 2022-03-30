@@ -1,15 +1,14 @@
 from datetime import datetime
 
-import mongoengine
+import mongoengine as me
 import pandas
-from mongoengine import Document, QuerySet
 
 from jarvis.abilities.finance.month import Month
 from jarvis.meta import ExpenseQuerySet
-from jarvis.abilities.administrative.models import User
+from jarvis.models import User
 
 
-class Expense(Document):
+class Expense(me.Document):
     """
     This model represents an Expense made by a user.
     The expense is stored for the user who recorded it
@@ -17,13 +16,12 @@ class Expense(Document):
     in the field 'created' defaults to time of instantiation.
     """
     output_date_format = "%y-%m-%d %H:%M"
-    expense_name = mongoengine.StringField(required=True, max_length=200)
-    user_reference = mongoengine.ReferenceField(User, required=True)
-    price = mongoengine.IntField(required=True, min_value=0)
-    created = mongoengine.DateTimeField(default=datetime.now())
-    account_for = mongoengine.DateField(default=None)
-    name = mongoengine.StringField(required=False)
-    author = mongoengine.StringField(required=False)
+    expense_name = me.StringField(required=True, max_length=200)
+    user_reference = me.ReferenceField(User, required=True)
+    price = me.IntField(required=True, min_value=0)
+    created = me.DateTimeField(default=datetime.now())
+    account_for = me.DateField(default=None)
+    name = me.StringField(required=False)
 
     meta = {"queryset_class": ExpenseQuerySet}
 
@@ -44,7 +42,9 @@ class Expense(Document):
         return name + price + created_date + account_month + sep
 
     @staticmethod
-    def get_expenses_for_period_all_users(month_for_query: str = None) -> QuerySet:
+    def get_expenses_for_period_all_users(
+            month_for_query: str = None
+    ) -> me.QuerySet:
         """
         Returns Expense instances for all users, in the provided
         month.
@@ -60,7 +60,8 @@ class Expense(Document):
 
     @staticmethod
     def get_expenses_for_period_and_user(user: User,
-                                         month_for_query: str = None) -> QuerySet:
+                                         month_for_query: str = None
+                                         ) -> me.QuerySet:
         """
         Returns Expense instances for given user
         recorded in the given month.
