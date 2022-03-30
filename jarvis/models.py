@@ -1,8 +1,10 @@
-import mongoengine
-from mongoengine import Document
+import mongoengine as me
+from pyttman.core.communication.models.containers import Message
+
+from jarvis.meta import UserQuerySet
 
 
-class AppEnrollment(Document):
+class AppEnrollment(me.Document):
     """
     Embedded document, representing app names provided
     in Jarvis, allowing users to enroll and/or de-enroll from

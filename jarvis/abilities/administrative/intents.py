@@ -4,7 +4,7 @@ from pyttman.core.communication.models.containers import Message, Reply, \
 from pyttman.core.intent import Intent
 
 from jarvis.abilities.finance.intents import extract_username
-from jarvis.abilities.administrative.models import User
+from jarvis.models import User
 from jarvis.abilities.finance.models import Expense
 
 
