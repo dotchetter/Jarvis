@@ -9,12 +9,13 @@ from pyttman.core.communication.models.containers import Message, Reply, \
 from pyttman.core.entity_parsing import identifiers
 from pyttman.core.entity_parsing.fields import TextEntityField, \
     BoolEntityField, IntegerEntityField, EntityFieldBase
-from pyttman.core.entity_parsing.identifiers import IntegerIdentifier
+from pyttman.core.entity_parsing.identifiers import IntegerIdentifier, \
+    CapitalizedIdentifier
 from pyttman.core.intent import Intent
 
-from jarvis.abilities.administrative.models import User
+from jarvis.models import User
 from jarvis.abilities.finance.helpers import SharedExpensesApp
-from jarvis.abilities.finance.models import Expense
+from jarvis.abilities.finance.models import Expense, Debt
 from jarvis.abilities.finance.month import Month
 
 
@@ -31,7 +32,7 @@ class CustomIntegerEntityField(EntityFieldBase):
         return cls.type_cls("".join(i for i in value if i.isdigit()))
 
 
-class AddExpenseIntent(Intent):
+class AddExpense(Intent):
     """
     Allows users to add expenses.
     """
@@ -58,43 +59,37 @@ class AddExpenseIntent(Intent):
         store_for_next_month = BoolEntityField(message_contains=("nästa",
                                                                  "månad"))
         expense_value = CustomIntegerEntityField()
-        username_for_query = TextEntityField(prefixes=("for", "för",
+        store_for_username = TextEntityField(prefixes=("for", "för",
                                                        "user", "användare"))
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
         expense_name = message.entities.get("expense_name")
         expense_value = message.entities.get("expense_value")
         for_next_month = message.entities.get("store_for_next_month")
+        store_for_username = extract_username(message, "store_for_username")
+        account_for_date = datetime.now()
 
         if None in (expense_value, expense_name):
             return Reply("Du måste ange både namn och "
                          "pris på vad du har köpt.")
 
-        # If the user want to register this expense for the next
-        # calendar month, add one month to the Expense.created field.
-        account_for_date = datetime.now()
-
         if for_next_month:
             account_for_date += pandas.DateOffset(months=1)
 
-        username_for_query = extract_username(message)
-
         try:
-            user = User.get_by_alias_or_username(username_for_query).first()
+            user = User.get_by_alias_or_username(store_for_username).first()
         except (IndexError, ValueError):
-            pyttman.logger.log(f"No db User matched: {username_for_query}")
+            pyttman.logger.log(f"No db User matched: {store_for_username}")
             return Reply(self.storage["default_replies"]["no_users_matches"])
 
-        Expense.objects.create(price=expense_value,
-                               expense_name=expense_name,
-                               user_reference=user,
-                               created=datetime.now(),
+        Expense.objects.create(price=expense_value, expense_name=expense_name,
+                               user_reference=user, created=datetime.now(),
                                account_for=account_for_date)
 
         return Reply(f"Utlägget sparades för {user.username.capitalize()}")
 
 
-class GetExpensesIntent(Intent):
+class GetExpenses(Intent):
     """
     Returns a ReplyStream of all expenses for the
     user making the request.
@@ -149,7 +144,7 @@ class GetExpensesIntent(Intent):
         :param message:
         :return:
         """
-        username_for_query = extract_username(message)
+        username_for_query = extract_username(message, "username_for_query")
 
         try:
             user = User.get_by_alias_or_username(username_for_query).first()
@@ -219,18 +214,55 @@ class CalculateSplitExpenses(Intent):
         return ReplyStream(output)
 
 
-def extract_username(message: Message) -> str:
+class AddDebt(Intent):
+    """
+    Adds a Debt for a user. Who is borrower and lender is
+    determined by the message contents.
+    """
+    lead = ("lånat", "lånade", "borrowed", "lån", "borrow")
+
+    class EntityParser:
+        amount = CustomIntegerEntityField()
+        borrower_name = TextEntityField(identifier=CapitalizedIdentifier)
+        lender_name = TextEntityField(prefixes=("av", "från", "from", "by"))
+
+    def respond(self, message: Message) -> Reply | ReplyStream:
+        lender_name = message.entities.get("lender_name")
+        borrower_name = extract_username(message, "borrower_name")
+        account_for = datetime.now()
+
+        if (amount := message.entities.get("amount")) is None:
+            return Reply("Du måste ange belopp på skulden")
+
+        try:
+            borrower: User = User.get_by_alias_or_username(borrower_name).first()
+        except (IndexError, ValueError):
+            return Reply(self.storage["default_replies"]["no_users_matches"])
+
+        try:
+            lender: User = User.get_by_alias_or_username(lender_name).first()
+        except (IndexError, ValueError):
+            pyttman.logger.log(f"No db User matched: {lender_name}")
+            return Reply(self.storage["default_replies"]["no_users_matches"])
+
+        Debt.objects.create(borrower=borrower, lender=lender,
+                            amount=amount, account_for=account_for)
+
+        return Reply(f"Okej, jag har antecknat att "
+                     f"{borrower.username.capitalize()} "
+                     f"har lånat {amount}:- av "
+                     f"{lender.username.capitalize()}.")
+
+
+def extract_username(message: Message, entity_name: str) -> str:
     """
     Extracts the appropriate username depending on whether
         * it was mentioned in an Entity,
         * it's accessible on message.author.id (discord)
         * it's accessible on message.author (pyttman dev mode)
-    :param message:
-    :return: str
     """
     # Default to message.author.id unless provided as an entity
-    if (username_for_query := message.entities.get(
-            "username_for_query")) is None:
+    if (username_for_query := message.entities.get(entity_name)) is None:
         try:
             username_for_query = message.author.id
         except AttributeError:

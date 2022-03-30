@@ -134,3 +134,16 @@ class Expense(Document):
         # not 31/9 00:00:00 to 31/10 00:00:00
         start_date += pandas.DateOffset(days=1)
         return start_date, end_date
+
+
+class Debt(me.Document):
+    """
+    An outstanding debt from one user to another.
+    Debts can be accounted for when accounting for expenses,
+    as they will inflict 100% of their amount as reduction to
+    an initial compensation to the lender.
+    """
+    borrower = me.ReferenceField(User, required=True)
+    lender = me.ReferenceField(User, required=True)
+    amount = me.FloatField(default=0.0)
+    account_for = me.DateField(default=None)

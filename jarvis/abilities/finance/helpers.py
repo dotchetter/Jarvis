@@ -1,8 +1,8 @@
 from dataclasses import dataclass
+from mongoengine.queryset.visitor import Q
 
-from jarvis.abilities.administrative.models import User
-from jarvis.models import AppEnrollment
-from jarvis.abilities.finance.models import Expense
+from jarvis.models import AppEnrollment, User
+from jarvis.abilities.finance.models import Expense, Debt
 
 
 class SharedExpensesApp:
@@ -46,6 +46,13 @@ class SharedExpensesApp:
 
         while expense_buckets:
             bucket = expense_buckets.pop()
+            borrower = top_paying_bucket.user
+            lender = bucket.user
+
+            for debt in Debt.objects.filter(
+                    Q(borrower=borrower) & Q(lender=lender)):
+                bucket.paid_amount += debt.amount
+
             bucket.debt = (quotient - bucket.paid_amount)
             processed.append(bucket)
 
