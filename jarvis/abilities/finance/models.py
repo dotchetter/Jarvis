@@ -1,15 +1,14 @@
 from datetime import datetime
 
-import mongoengine
+import mongoengine as me
 import pandas
-from mongoengine import Document, QuerySet
 
 from jarvis.abilities.finance.month import Month
 from jarvis.meta import ExpenseQuerySet
-from jarvis.abilities.administrative.models import User
+from jarvis.models import User
 
 
-class Expense(Document):
+class Expense(me.Document):
     """
     This model represents an Expense made by a user.
     The expense is stored for the user who recorded it
@@ -17,13 +16,12 @@ class Expense(Document):
     in the field 'created' defaults to time of instantiation.
     """
     output_date_format = "%y-%m-%d %H:%M"
-    expense_name = mongoengine.StringField(required=True, max_length=200)
-    user_reference = mongoengine.ReferenceField(User, required=True)
-    price = mongoengine.IntField(required=True, min_value=0)
-    created = mongoengine.DateTimeField(default=datetime.now())
-    account_for = mongoengine.DateField(default=None)
-    name = mongoengine.StringField(required=False)
-    author = mongoengine.StringField(required=False)
+    expense_name = me.StringField(required=True, max_length=200)
+    user_reference = me.ReferenceField(User, required=True)
+    price = me.IntField(required=True, min_value=0)
+    created = me.DateTimeField(default=lambda: datetime.now())
+    account_for = me.DateField(default=None)
+    name = me.StringField(required=False)
 
     meta = {"queryset_class": ExpenseQuerySet}
 
@@ -33,8 +31,8 @@ class Expense(Document):
         :return: str
         """
         sep = "\n" + ("-" * 20) + "\n"
-        name = f":pinched_fingers: **{self.expense_name}**\n"
-        price = f":money_with_wings: {self.price}:-\n"
+        name = f":eyes: **{self.expense_name}**\n"
+        price = f":money_with_wings: **{self.price}**:-\n"
 
         account_month = Month(self.account_for.month).name.capitalize()
         year = self.account_for.year
@@ -44,7 +42,9 @@ class Expense(Document):
         return name + price + created_date + account_month + sep
 
     @staticmethod
-    def get_expenses_for_period_all_users(month_for_query: str = None) -> QuerySet:
+    def get_expenses_for_period_all_users(
+            month_for_query: str = None
+    ) -> me.QuerySet:
         """
         Returns Expense instances for all users, in the provided
         month.
@@ -60,7 +60,8 @@ class Expense(Document):
 
     @staticmethod
     def get_expenses_for_period_and_user(user: User,
-                                         month_for_query: str = None) -> QuerySet:
+                                         month_for_query: str = None
+                                         ) -> me.QuerySet:
         """
         Returns Expense instances for given user
         recorded in the given month.
@@ -134,3 +135,28 @@ class Expense(Document):
         # not 31/9 00:00:00 to 31/10 00:00:00
         start_date += pandas.DateOffset(days=1)
         return start_date, end_date
+
+
+class Debt(me.Document):
+    """
+    An outstanding debt from one user to another.
+    Debts can be accounted for when accounting for expenses,
+    as they will inflict 100% of their amount as reduction to
+    an initial compensation to the lender.
+    """
+    borrower: User = me.ReferenceField(User, required=True)
+    lender: User = me.ReferenceField(User, required=True)
+    amount: float = me.FloatField(default=0.0)
+    created = me.DateTimeField(default=lambda: datetime.now())
+
+    def __str__(self):
+        """
+        UI friendly string, for easy visualization in chat.
+        :return: str
+        """
+        sep = "\n" + ("-" * 20) + "\n"
+        lender = f":bust_in_silhouette: **" \
+                 f"{self.lender.username.capitalize()}**\n"
+        amount = f":money_with_wings: **{self.amount}:-**\n"
+
+        return lender + amount + sep

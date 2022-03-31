@@ -4,8 +4,7 @@ import mongoengine
 from pyttman import settings
 from pyttman.core.ability import Ability
 
-from jarvis.abilities.finance.intents import AddExpenseIntent, \
-    GetExpensesIntent, CalculateSplitExpenses
+from jarvis.abilities.finance.intents import *
 
 
 class FinanceAbility(Ability):
@@ -17,9 +16,12 @@ class FinanceAbility(Ability):
     expenses at home, to make splitting bills fair
     and square.
     """
-    intents = (AddExpenseIntent,
-               GetExpensesIntent,
-               CalculateSplitExpenses)
+    intents = (AddExpense,
+               GetExpenses,
+               CalculateSplitExpenses,
+               AddDebt,
+               GetDebts,
+               RepayDebt)
 
     def configure(self) -> None:
         """
@@ -39,9 +41,8 @@ class FinanceAbility(Ability):
                          {"no_expenses_matched": "Det finns inga utgifter "
                                                  "sparade med angivna "
                                                  "kriterier",
-
                           "no_users_matches":    "Jag hittade ingen "
-                                                 "användare för sökningen. "
+                                                 "användare som matchade. "
                                                  "Om du angav ett namn, "
                                                  "kontrollera stavningen. "
                                                  "Om du inte angav något, "
