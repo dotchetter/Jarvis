@@ -349,7 +349,7 @@ class GetDebts(Intent):
         else:
             reply_stream.put(
                 f"**{borrower.username.capitalize()} har totalt {debt_sum}:- "
-                f"i skulder registrerade, se nedan:")
+                f"i skulder registrerade, se nedan:**")
 
         for debt in Debt.objects.filter(borrower=borrower):
             try:
