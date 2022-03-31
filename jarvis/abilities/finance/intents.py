@@ -4,7 +4,6 @@ from typing import Union, Any, Collection
 import pandas
 import pyttman
 from mongoengine import QuerySet, Q
-from mongoengine.queryset import QNode
 from pyttman.core.communication.models.containers import Message, Reply, \
     ReplyStream
 from pyttman.core.entity_parsing.fields import TextEntityField, \
@@ -13,10 +12,10 @@ from pyttman.core.entity_parsing.identifiers import IntegerIdentifier, \
     CapitalizedIdentifier
 from pyttman.core.intent import Intent
 
-from jarvis.models import User
 from jarvis.abilities.finance.helpers import SharedExpensesApp
 from jarvis.abilities.finance.models import Expense, Debt
 from jarvis.abilities.finance.month import Month
+from jarvis.models import User
 from jarvis.utils import extract_username, get_username_from_message
 
 
@@ -30,6 +29,8 @@ class CustomIntegerEntityField(EntityFieldBase):
 
     @classmethod
     def perform_type_conversion(cls, value: str) -> Any:
+        if value is None:
+            return 0
         return cls.type_cls("".join(i for i in value if i.isdigit()))
 
 
@@ -156,7 +157,7 @@ class GetExpenses(Intent):
         except (IndexError, ValueError):
             pyttman.logger.log(f"No db User matched: {username_for_query}")
             return Reply(self.storage["default_replies"]["no_users_matches"])
-        print("returning data for", user.username)
+
         try:
             month_for_query = message.entities.get("month")
         except AttributeError:
@@ -205,8 +206,7 @@ class CalculateSplitExpenses(Intent):
                   "ska ha betalat lika mycket."
 
     class EntityParser:
-        deduct_debts = BoolEntityField(message_contains=("skuld", "skulder,"
-                                                         "debt", "debts",))
+        deduct_debts = BoolEntityField(message_contains=("skuld", "lån"))
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
         buckets = SharedExpensesApp.calculate_split()
@@ -217,25 +217,27 @@ class CalculateSplitExpenses(Intent):
 
         while buckets:
             bucket = buckets.pop()
-            if message.entities["deduct_debts"] is True:
-                # Find out if the top-paying user owes this user anything.
-                top_paying_bucket_debt = Debt.objects.filter(
-                    Q(borrower=top_paying.user) & Q(lender=bucket.user)
-                ).sum("amount")
-                print("BELOPP:", top_paying_bucket_debt)
-                debt_if_refund = abs(bucket.debt - top_paying_bucket_debt)
-                output.append(
-                    f"{top_paying.user.username.capitalize()} är skyldig "
-                    f"{bucket.user.username.capitalize()} "
-                    f"**{top_paying_bucket_debt}:-**. "
-                    f"Om denna återbetalas, blir kvarvarande skuld "
-                    f"{debt_if_refund}:-.")
-
             output.append(f"{bucket.user.username.capitalize()} har betalat "
                           f"**{bucket.paid_amount}:-**, och ska kompensera "
                           f"{top_paying.user.username.capitalize()} med "
                           f"**{bucket.debt}:-**.")
 
+            if message.entities["deduct_debts"] is True:
+                # Find out if the top-paying user owes this user anything.
+                top_paying_bucket_debt = Debt.objects.filter(
+                    Q(borrower=top_paying.user) & Q(lender=bucket.user)
+                ).sum("amount")
+
+                # Don't output negative numbers.
+                debt_if_refund = max(0, bucket.debt - top_paying_bucket_debt)
+
+                output.append(
+                    f"{top_paying.user.username.capitalize()} är skyldig "
+                    f"{bucket.user.username.capitalize()} "
+                    f"**{top_paying_bucket_debt}:-**. "
+                    f"Om denna ska återbetalas i samband med "
+                    f"konteringsersättningen, blir kompensationen istället "
+                    f"**{debt_if_refund}**:-.")
         return ReplyStream(output)
 
 
@@ -248,7 +250,7 @@ class AddDebt(Intent):
               "Katrin lånade 100 av Simon | " \
               "jag lånade ut 100 till Katrin | " \
               "Jag har lånat 100 av Katrin"
-    lead = ("lånat", "lånade", "borrowed", "lån", "borrow", "debt", "skyldig")
+    lead = ("lånat", "lånade", "borrowed", "borrow", "debt", "skyldig")
 
     class EntityParser:
         amount = CustomIntegerEntityField()
@@ -402,16 +404,12 @@ class RepayDebt(Intent):
             "amount")
 
         for debt in debts:
-            if remaining_repaid_amount < debt.amount:
-                debt.amount -= remaining_repaid_amount
-                remaining_repaid_amount -= debt.amount
-                debt.save()
+            if remaining_repaid_amount <= 0:
                 break
-            else:
-                if (debt.amount - remaining_repaid_amount) <= 0:
-                    debt.delete()
-                remaining_repaid_amount -= debt.amount
-                debt.save()
+            debt_amount_before_reduce = debt.amount
+            debt.amount -= remaining_repaid_amount
+            remaining_repaid_amount -= debt_amount_before_reduce
+            debt.delete() if debt.amount <= 0 else debt.save()
 
         # Looks like the user overpaid. Create a new debt going the other way.
         if remaining_repaid_amount > 0:
