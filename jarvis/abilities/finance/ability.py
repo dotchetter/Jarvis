@@ -19,7 +19,9 @@ class FinanceAbility(Ability):
     intents = (AddExpense,
                GetExpenses,
                CalculateSplitExpenses,
-               AddDebt)
+               AddDebt,
+               GetDebts,
+               RepayDebt)
 
     def configure(self) -> None:
         """
@@ -39,7 +41,6 @@ class FinanceAbility(Ability):
                          {"no_expenses_matched": "Det finns inga utgifter "
                                                  "sparade med angivna "
                                                  "kriterier",
-
                           "no_users_matches":    "Jag hittade ingen "
                                                  "användare som matchade. "
                                                  "Om du angav ett namn, "

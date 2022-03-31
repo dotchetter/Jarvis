@@ -19,7 +19,7 @@ class Expense(me.Document):
     expense_name = me.StringField(required=True, max_length=200)
     user_reference = me.ReferenceField(User, required=True)
     price = me.IntField(required=True, min_value=0)
-    created = me.DateTimeField(default=datetime.now())
+    created = me.DateTimeField(default=lambda: datetime.now())
     account_for = me.DateField(default=None)
     name = me.StringField(required=False)
 
@@ -31,8 +31,8 @@ class Expense(me.Document):
         :return: str
         """
         sep = "\n" + ("-" * 20) + "\n"
-        name = f":pinched_fingers: **{self.expense_name}**\n"
-        price = f":money_with_wings: {self.price}:-\n"
+        name = f":eyes: **{self.expense_name}**\n"
+        price = f":money_with_wings: **{self.price}**:-\n"
 
         account_month = Month(self.account_for.month).name.capitalize()
         year = self.account_for.year
@@ -144,7 +144,19 @@ class Debt(me.Document):
     as they will inflict 100% of their amount as reduction to
     an initial compensation to the lender.
     """
-    borrower = me.ReferenceField(User, required=True)
-    lender = me.ReferenceField(User, required=True)
-    amount = me.FloatField(default=0.0)
-    account_for = me.DateField(default=None)
+    borrower: User = me.ReferenceField(User, required=True)
+    lender: User = me.ReferenceField(User, required=True)
+    amount: float = me.FloatField(default=0.0)
+    created = me.DateTimeField(default=lambda: datetime.now())
+
+    def __str__(self):
+        """
+        UI friendly string, for easy visualization in chat.
+        :return: str
+        """
+        sep = "\n" + ("-" * 20) + "\n"
+        lender = f":bust_in_silhouette: **" \
+                 f"{self.lender.username.capitalize()}**\n"
+        amount = f":money_with_wings: **{self.amount}:-**\n"
+
+        return lender + amount + sep

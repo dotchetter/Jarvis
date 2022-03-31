@@ -46,13 +46,6 @@ class SharedExpensesApp:
 
         while expense_buckets:
             bucket = expense_buckets.pop()
-            borrower = top_paying_bucket.user
-            lender = bucket.user
-
-            for debt in Debt.objects.filter(
-                    Q(borrower=borrower) & Q(lender=lender)):
-                bucket.paid_amount += debt.amount
-
             bucket.debt = (quotient - bucket.paid_amount)
             processed.append(bucket)
 

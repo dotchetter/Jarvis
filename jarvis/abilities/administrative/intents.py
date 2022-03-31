@@ -1,11 +1,14 @@
 import pyttman
-from pyttman.core.communication.models.containers import Message, Reply, \
-    ReplyStream
 from pyttman.core.intent import Intent
+from pyttman.core.communication.models.containers import (
+    Message,
+    Reply,
+    ReplyStream
+)
 
-from jarvis.abilities.finance.intents import extract_username
 from jarvis.models import User
 from jarvis.abilities.finance.models import Expense
+from jarvis.utils import get_username_from_message
 
 
 class DevInfo(Intent):
@@ -37,7 +40,7 @@ class UserInfo(Intent):
 
     def respond(self, message: Message) -> Reply | ReplyStream:
 
-        username_for_query = extract_username(message)
+        username_for_query = get_username_from_message(message)
 
         try:
             user = User.get_by_alias_or_username(username_for_query).first()

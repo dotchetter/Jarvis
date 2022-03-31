@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from mongoengine import QuerySet
 
 from jarvis.abilities.finance.month import Month
-from jarvis.abilities.administrative.models import User
+from jarvis.models import User
 from jarvis.abilities.finance.models import Expense
 
 
