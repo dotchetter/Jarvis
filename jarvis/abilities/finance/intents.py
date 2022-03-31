@@ -196,8 +196,7 @@ class CalculateSplitExpenses(Intent):
     for all users who have contributed to the
     shared expenses, and splits it up evenly.
     """
-    lead = ("kontera", "bokför", "beräkna", "splitta", "dela")
-    trail = ("utgifter", "utlägg", "kostnader")
+    lead = ("kontera",)
     example = "Kontera utgifter"
     description = "Beräkna ugfiter för alla användare för " \
                   "nuvarande period. I rapporten framgår " \
@@ -209,36 +208,44 @@ class CalculateSplitExpenses(Intent):
         deduct_debts = BoolEntityField(message_contains=("skuld", "lån"))
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
+        reply_stream = ReplyStream()
         buckets = SharedExpensesApp.calculate_split()
-        top_paying = buckets.pop()
-        output = [f"**{top_paying.user.username.capitalize()}** "
-                  f"har betalat mest denna månad med en total av "
-                  f"**{top_paying.paid_amount}:-** hittills.\n"]
+        top_paying_bucket: SharedExpensesApp.SharedExpenseBucket = buckets.pop()
+        top_paying_username = top_paying_bucket.user.username.capitalize()
+
+        reply_stream.put(f"{top_paying_username} har betalat "
+                         f"**{top_paying_bucket.paid_amount}:-** denna månad.")
 
         while buckets:
             bucket = buckets.pop()
-            output.append(f"{bucket.user.username.capitalize()} har betalat "
-                          f"**{bucket.paid_amount}:-**, och ska kompensera "
-                          f"{top_paying.user.username.capitalize()} med "
-                          f"**{bucket.debt}:-**.")
+            bucket_username = bucket.user.username.capitalize()
+
+            if bucket.paid_amount == top_paying_bucket.paid_amount:
+                msg = f"{bucket_username} har betalat lika mycket " \
+                      f"som {top_paying_username}: **" \
+                      f"{bucket.paid_amount}:-**, ingen kompensation behövs."
+            else:
+                msg = f"{bucket_username} har betalat **{bucket.paid_amount}:" \
+                      f"-**, och ska kompensera {top_paying_username} med " \
+                      f"**{bucket.debt}:-**."
+            reply_stream.put(msg)
 
             if message.entities["deduct_debts"] is True:
                 # Find out if the top-paying user owes this user anything.
                 top_paying_bucket_debt = Debt.objects.filter(
-                    Q(borrower=top_paying.user) & Q(lender=bucket.user)
+                    Q(borrower=top_paying_bucket.user) & Q(lender=bucket.user)
                 ).sum("amount")
 
                 # Don't output negative numbers.
                 debt_if_refund = max(0, bucket.debt - top_paying_bucket_debt)
-
-                output.append(
-                    f"{top_paying.user.username.capitalize()} är skyldig "
+                reply_stream.put(
+                    f"{top_paying_bucket.user.username.capitalize()} är skyldig "
                     f"{bucket.user.username.capitalize()} "
                     f"**{top_paying_bucket_debt}:-**. "
                     f"Om denna ska återbetalas i samband med "
                     f"konteringsersättningen, blir kompensationen istället "
                     f"**{debt_if_refund}**:-.")
-        return ReplyStream(output)
+        return reply_stream
 
 
 class AddDebt(Intent):
