@@ -1,12 +1,12 @@
 import os
 from datetime import datetime
 from pathlib import Path
+
 from dotenv import load_dotenv
-import certifi
 
 load_dotenv()
 
-DEV_MODE = False
+DEV_MODE = True
 
 INTERACTIVE_SHELL = False
 
@@ -16,34 +16,25 @@ DB_NAME_DEV = os.getenv("MONGO_DB_NAME_DEV")
 
 db_name = DB_NAME_DEV if DEV_MODE else DB_NAME_PROD
 
-MONGO_DB_CONFIG = {
-    "tlsCAFile": certifi.where(),
-    "db": None,  # Configured in Ability 'Configure' hook
-    "host": os.getenv("MONGO_DB_URL"),
-    "username": os.getenv("MONGO_DB_USER"),
-    "password": os.getenv("MONGO_DB_PASSWORD"),
-    "port": int(os.getenv("MONGO_DB_PORT"))
-}
-
 APPEND_LOG_FILES = True
 
-MESSAGE_ROUTER = {
+MIDDLEWARE = {
 
-    "ROUTER_CLASS": "pyttman.core.parsing.routing.FirstMatchingRouter",
+    "ROUTER_CLASS": "pyttman.core.middleware.routing.FirstMatchingRouter",
 
     "COMMAND_UNKNOWN_RESPONSES": [
         "Ursäkta, jag förstår inte?",
     ],
     "HELP_KEYWORD": "hjälp",
+
+    "FATAL_EXCEPTION_AUTO_REPLY": "Åh nej! Något gick fel. "
+                                  "Försök igen om en liten stund."
 }
 
 ABILITIES = [
     "jarvis.abilities.finance.ability.FinanceAbility",
     "jarvis.abilities.administrative.ability.AdministrativeAbility"
 ]
-
-FATAL_EXCEPTION_AUTO_REPLY = "Åh nej! Något gick fel. Försök igen om en " \
-                             "liten stund."
 
 
 CLIENT = {
