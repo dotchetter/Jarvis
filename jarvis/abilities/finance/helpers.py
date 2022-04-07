@@ -22,9 +22,22 @@ class SharedExpensesApp:
         debt: int
 
     @classmethod
-    def calculate_split(cls):
+    def enrolled_usernames(cls):
+        return cls.get_enrolled_users()
+
+    @classmethod
+    def get_enrolled_users(cls, scalar=None) -> Collection[User]:
         app_enrollment = AppEnrollment.objects.get(shared_expenses=True)
-        enrolled = User.objects.filter(enrolled_apps=app_enrollment)
+
+        return User.objects.filter(
+            enrolled_apps=app_enrollment
+        ).scalar(
+            scalar
+        ).all()
+
+    @classmethod
+    def calculate_split(cls):
+        enrolled = cls.get_enrolled_users()
         expense_buckets, processed = [], []
         total_sum = 0
 
