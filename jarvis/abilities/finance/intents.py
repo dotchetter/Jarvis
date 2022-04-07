@@ -1,15 +1,13 @@
 from datetime import datetime
-from typing import Union, Any, Collection
+from typing import Union, Collection
 
 import pandas
 import pyttman
 from mongoengine import QuerySet, Q
-from pyttman.core.communication.models.containers import Message, Reply, \
-    ReplyStream
+from pyttman.core.containers import Message, Reply, ReplyStream
 from pyttman.core.entity_parsing.fields import TextEntityField, \
-    BoolEntityField, EntityFieldBase
-from pyttman.core.entity_parsing.identifiers import IntegerIdentifier, \
-    CapitalizedIdentifier
+    BoolEntityField, IntEntityField
+from pyttman.core.entity_parsing.identifiers import CapitalizedIdentifier
 from pyttman.core.intent import Intent
 
 from jarvis.abilities.finance.helpers import SharedExpensesApp
@@ -17,21 +15,6 @@ from jarvis.abilities.finance.models import Expense, Debt
 from jarvis.abilities.finance.month import Month
 from jarvis.models import User
 from jarvis.utils import extract_username, get_username_from_message
-
-
-class CustomIntegerEntityField(EntityFieldBase):
-    """
-    IntegerEntityField classes specialize in finding numbers.
-    The value output type from this EntityField is <int>.
-    """
-    type_cls = int
-    identifier_cls = IntegerIdentifier
-
-    @classmethod
-    def perform_type_conversion(cls, value: str) -> Any:
-        if value is None:
-            return 0
-        return cls.type_cls("".join(i for i in value if i.isdigit()))
 
 
 class AddExpense(Intent):
@@ -60,11 +43,12 @@ class AddExpense(Intent):
         expense_name = TextEntityField(span=10)
         store_for_next_month = BoolEntityField(message_contains=("nästa",
                                                                  "månad"))
-        expense_value = CustomIntegerEntityField()
+        expense_value = IntEntityField()
         store_for_username = TextEntityField(prefixes=("for", "för",
                                                        "user", "användare"))
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
+        print(pyttman.app.settings)
         expense_name = message.entities.get("expense_name")
         expense_value = message.entities.get("expense_value")
         for_next_month = message.entities.get("store_for_next_month")
@@ -134,8 +118,7 @@ class GetExpenses(Intent):
                                                          "summerade",
                                                          "summed", "totalt",
                                                          "totala", "total"))
-        show_most_recent_expense = BoolEntityField(
-            message_contains=("senaste",))
+        show_most_recent_expense = BoolEntityField(message_contains=("senaste",))
         month = TextEntityField(valid_strings=tuple(i.name for i in Month))
         username_for_query = TextEntityField(prefixes=("for", "för", "user",
                                                        "användare"))
@@ -260,20 +243,22 @@ class AddDebt(Intent):
     lead = ("lånat", "lånade", "borrowed", "borrow", "debt", "skyldig")
 
     class EntityParser:
-        amount = CustomIntegerEntityField()
+        amount = IntEntityField()
+
         borrower_third_person = TextEntityField(
-            identifier=CapitalizedIdentifier,
-            suffixes=("av", "från", "by")
-        )
+            suffixes=("av", "från", "by"),
+            valid_strings=SharedExpensesApp.enrolled_usernames)
+
         lender_third_person = TextEntityField(
             identifier=CapitalizedIdentifier,
-            prefixes=("av", )
-        )
+            prefixes=("av",),
+            valid_strings=SharedExpensesApp.enrolled_usernames)
+
         borrower_mentioned_alone = TextEntityField(
-            identifier=CapitalizedIdentifier
-        )
+            valid_strings=SharedExpensesApp.enrolled_usernames)
 
     def respond(self, message: Message) -> Reply | ReplyStream:
+        print(message.entities)
         user_is_lender = False
         amount = message.entities["amount"]
         borrower_third_person = message.entities["borrower_third_person"]
@@ -384,7 +369,7 @@ class RepayDebt(Intent):
 
     class EntityParser:
         lender_name = TextEntityField(identifier=CapitalizedIdentifier)
-        repaid_amount = CustomIntegerEntityField()
+        repaid_amount = IntEntityField()
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         repaid_amount: int = message.entities.get("repaid_amount")
