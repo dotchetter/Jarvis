@@ -3,13 +3,11 @@ from unittest import TestCase
 
 import certifi
 import mongoengine
-import pandas
 from dotenv import load_dotenv
-from mongoengine import QuerySet
 
+from jarvis.abilities.finance.models import Expense
 from jarvis.abilities.finance.month import Month
 from jarvis.models import User
-from jarvis.abilities.finance.models import Expense
 
 
 class TestExpenseModel(TestCase):

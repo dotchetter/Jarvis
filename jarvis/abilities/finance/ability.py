@@ -1,6 +1,5 @@
 import sys
 
-import mongoengine
 from pyttman import settings
 from pyttman.core.ability import Ability
 
@@ -23,18 +22,11 @@ class FinanceAbility(Ability):
                GetDebts,
                RepayDebt)
 
-    def configure(self) -> None:
+    def before_create(self) -> None:
         """
         Configure hook method, executed before the app starts
         :return: None
         """
-        # Connect to the appropriate MongoDB Atlas database
-        if settings.DEV_MODE:
-            settings.MONGO_DB_CONFIG["db"] = settings.DB_NAME_DEV
-        else:
-            settings.MONGO_DB_CONFIG["db"] = settings.DB_NAME_PROD
-
-        mongoengine.connect(**settings.MONGO_DB_CONFIG)
 
         # Set up a default reply when no expenses are found
         self.storage.put("default_replies",

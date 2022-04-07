@@ -1,5 +1,5 @@
 import mongoengine as me
-from pyttman.core.communication.models.containers import Message
+from pyttman.core.containers import Message
 
 from jarvis.meta import UserQuerySet
 

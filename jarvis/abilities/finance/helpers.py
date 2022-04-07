@@ -1,8 +1,8 @@
 from dataclasses import dataclass
-from mongoengine.queryset.visitor import Q
+from typing import Collection
 
+from jarvis.abilities.finance.models import Expense
 from jarvis.models import AppEnrollment, User
-from jarvis.abilities.finance.models import Expense, Debt
 
 
 class SharedExpensesApp:
