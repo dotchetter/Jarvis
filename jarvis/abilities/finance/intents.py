@@ -293,8 +293,9 @@ class GetDebts(Intent):
     lead = ("visa", "lista", "show", "get", "hämta")
     trail = ("skuld", "skulder", "debts", "lån", "lånat", "lånade")
 
-    class EntityParser:
-        borrower_name = TextEntityField(identifier=CapitalizedIdentifier)
+    borrower_name = TextEntityField(
+        valid_strings=SharedExpensesApp.enrolled_usernames,
+    )
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         reply_stream = ReplyStream()
@@ -334,15 +335,17 @@ class RepayDebt(Intent):
     example = "jag har betalat tillbaka 100:- till <användare>"
     lead = ("betalat", "betala", "återbetalat", "kompensera", "kompenserat")
 
-    class EntityParser:
-        lender_name = TextEntityField(identifier=CapitalizedIdentifier)
-        repaid_amount = IntEntityField()
+    repaid_amount = IntEntityField()
+    borrower_name = TextEntityField(
+        valid_strings=SharedExpensesApp.enrolled_usernames
+    )
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         repaid_amount: int = message.entities.get("repaid_amount")
-        lender_name: str = message.entities.get("lender_name")
+        borrower_name: str = message.entities.get("borrower_name")
         remaining_repaid_amount = repaid_amount
         current_user_username = get_username_from_message(message)
+        reply: Reply =
         try:
             borrower: User = User.get_by_alias_or_username(
                 borrower_name
