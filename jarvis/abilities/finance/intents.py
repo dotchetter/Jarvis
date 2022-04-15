@@ -4,6 +4,7 @@ from typing import Union, Collection
 import pandas
 import pyttman
 from mongoengine import QuerySet, Q
+from pyttman.core.ability import Ability
 from pyttman.core.containers import Message, Reply, ReplyStream
 from pyttman.core.entity_parsing.fields import TextEntityField, \
     BoolEntityField, IntEntityField
@@ -284,26 +285,6 @@ class AddDebt(Intent):
             return Reply("Du måste ange vem du lånat av, "
                          "eller vem du lånat ut pengar till.")
 
-        if borrower_mentioned_alone and not any((borrower_third_person,
-                                                 lender_third_person)):
-            # The current user is the lender, implicitly.
-            user_is_lender = True
-            lender_name = get_username_from_message(message)
-            borrower_name = extract_username(message,
-                                             "borrower_mentioned_alone")
-        elif borrower_third_person and lender_third_person:
-            # Lender and borrower declared explicitly
-            borrower_name = extract_username(message, "borrower_third_person")
-            lender_name = extract_username(message, "lender_third_person")
-        elif lender_third_person and not any((borrower_third_person,
-                                             borrower_mentioned_alone)):
-            # Lender mentioned explicitly, borrower is current user implicitly
-            borrower_name = get_username_from_message(message)
-            lender_name = extract_username(message, "lender_third_person")
-        else:
-            return Reply("Jag förstod inte vem som lånat av vem.. försök "
-                         "igen. Du kan alltid be om hjälp för att se exempel.")
-
         if (amount := message.entities.get("amount")) is None:
             return Reply("Du måste ange belopp på skulden")
 
@@ -326,11 +307,7 @@ class AddDebt(Intent):
                                f"provided: '{lender_name}'")
             return Reply(self.storage["default_replies"]["no_users_matches"])
 
-        if borrower == lender and user_is_lender:
-            return Reply("Glöm inte att ange vem du lånade pengar från.")
-
         Debt.objects.create(borrower=borrower, lender=lender, amount=amount)
-
         return Reply(f"Okej, jag har antecknat att "
                      f"{borrower.username.capitalize()} "
                      f"har lånat {amount}:- av "
@@ -448,47 +425,5 @@ class RepayDebt(Intent):
             reply = Reply(
                 f"{borrower_capitalized}"
                 f"har minskat sin skuld till dig med **"
-                f"{repaid_amount}**:-.")
-        return reply
-        try:
-            lender: User = User.get_by_alias_or_username(lender_name).first()
-        except (IndexError, ValueError):
-            pyttman.logger.log(f"Lender not found for entity "
-                               f"provided: '{lender_name}'")
-            return Reply(self.storage["default_replies"]["no_users_matches"])
-
-        borrower: User = User.get_by_alias_or_username(
-            current_user_username
-        ).first()
-
-        # Get debts common to this borrower and lender
-        # Order the debts by amount, desc
-        debts: Collection[Debt] = Debt.objects.filter(
-            Q(borrower=borrower) & Q(lender=lender)
-        ).order_by(
-            "amount")
-
-        for debt in debts:
-            if remaining_repaid_amount <= 0:
-                break
-            debt_amount_before_reduce = debt.amount
-            debt.amount -= remaining_repaid_amount
-            remaining_repaid_amount -= debt_amount_before_reduce
-            debt.delete() if debt.amount <= 0 else debt.save()
-
-        # Looks like the user overpaid. Create a new debt going the other way.
-        if remaining_repaid_amount > 0:
-            Debt.objects.create(amount=remaining_repaid_amount,
-                                lender=borrower,
-                                borrower=lender)
-            reply = Reply(
-                f"Du har överbetalat {lender.username.capitalize()} med "
-                f"**{remaining_repaid_amount}:-**. En skuld har skapats "
-                f"där du lånat ut **{remaining_repaid_amount}**:- till "
-                f"{lender.username.capitalize()}.")
-        else:
-            reply = Reply(
-                f"Du har minskat din skuld till **"
-                f"{lender.username.capitalize()}** med **"
                 f"{repaid_amount}**:-.")
         return reply
