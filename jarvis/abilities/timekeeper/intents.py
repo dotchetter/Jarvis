@@ -1,5 +1,4 @@
 from mongoengine import Q
-from pyttman.core.ability import Ability
 from pyttman.core.containers import ReplyStream, Reply, Message
 from pyttman.core.intent import Intent
 
@@ -75,7 +74,3 @@ class StopStopWatch(Intent):
                      f"{shift.duration.minute} minuter och "
                      f"{shift.duration.second} sekunder.")
 
-
-class WorkshiftAbility(Ability):
-    intents = (StartStopWatch,
-               StopStopWatch)
