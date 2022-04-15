@@ -194,20 +194,72 @@ class CalculateSplitExpenses(Intent):
             reply_stream.put(msg)
 
             if message.entities["deduct_debts"] is True:
+                output_base_string = "{0} är skyldig {1} **{2}:-**. Om " \
+                                     "denna ska återbetalas i samband med " \
+                                     "konteringsersättningen, blir " \
+                                     "kompensationen istället **{3}**:-."
+
                 # Find out if the top-paying user owes this user anything.
-                top_paying_bucket_debt = Debt.objects.filter(
+                top_paying_bucket_debt_to_user = Debt.objects.filter(
                     Q(borrower=top_paying_bucket.user) & Q(lender=bucket.user)
                 ).sum("amount")
 
-                # Don't output negative numbers.
-                debt_if_refund = max(0, bucket.debt - top_paying_bucket_debt)
-                reply_stream.put(
-                    f"{top_paying_bucket.user.username.capitalize()} är skyldig "
-                    f"{bucket.user.username.capitalize()} "
-                    f"**{top_paying_bucket_debt}:-**. "
-                    f"Om denna ska återbetalas i samband med "
-                    f"konteringsersättningen, blir kompensationen istället "
-                    f"**{debt_if_refund}**:-.")
+                # And also, see if the user owes the top-paying user anything
+                user_debt_to_top_paying = Debt.objects.filter(
+                    Q(borrower=bucket.user) & Q(lender=top_paying_bucket.user)
+                ).sum("amount")
+
+                if top_paying_bucket_debt_to_user and not \
+                        user_debt_to_top_paying:
+
+                    adjusted_debt = max(
+                        0, bucket.debt - top_paying_bucket_debt_to_user)
+
+                    reply_stream.put(
+                        output_base_string.format(
+                            top_paying_bucket.user.username.capitalize(),
+                            bucket.user.username.capitalize(),
+                            top_paying_bucket_debt_to_user,
+                            adjusted_debt))
+
+                elif user_debt_to_top_paying and not \
+                        top_paying_bucket_debt_to_user:
+
+                    adjusted_debt = max(
+                        0, bucket.debt + user_debt_to_top_paying)
+
+                    reply_stream.put(
+                        output_base_string.format(
+                            bucket.user.username.capitalize(),
+                            top_paying_bucket.user.username.capitalize(),
+                            user_debt_to_top_paying,
+                            adjusted_debt))
+
+                elif user_debt_to_top_paying and top_paying_bucket_debt_to_user:
+
+                    if user_debt_to_top_paying > \
+                            top_paying_bucket_debt_to_user:
+                        payee = top_paying_bucket.user
+                        payer = bucket.user
+                        adjusted_debt = max(
+                            0,
+                            (user_debt_to_top_paying -
+                             top_paying_bucket_debt_to_user))
+                    else:
+                        payee = bucket.user
+                        payer = top_paying_bucket.user
+                        adjusted_debt = max(
+                            0,
+                            (top_paying_bucket_debt_to_user -
+                             user_debt_to_top_paying))
+
+                    reply_stream.put(
+                        output_base_string.format(
+                            payer.username.capitalize(),
+                            payee.username.capitalize(),
+                            user_debt_to_top_paying,
+                            adjusted_debt))
+
         return reply_stream
 
 
