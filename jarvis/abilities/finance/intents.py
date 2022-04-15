@@ -343,7 +343,58 @@ class RepayDebt(Intent):
         lender_name: str = message.entities.get("lender_name")
         remaining_repaid_amount = repaid_amount
         current_user_username = get_username_from_message(message)
+        try:
+            borrower: User = User.get_by_alias_or_username(
+                borrower_name
+            ).first()
+        except (IndexError, ValueError):
+            pyttman.logger.log(f"Borrower not found for entity "
+                               f"provided: '{borrower_name}'")
+            return Reply(self.storage["default_replies"]["no_users_matches"])
 
+        lender: User = User.get_by_alias_or_username(
+            current_user_username
+        ).first()
+
+        if lender == borrower:
+            return Reply("Endast lånegivaren kan registrera en inbetald "
+                         "skuld.")
+
+        borrower_capitalized = borrower.username.capitalize()
+        lender_capitalized = lender.username.capitalize()
+
+        # Get debts common to this borrower and lender
+        # Order the debts by amount, desc
+        debts: Collection[Debt] = Debt.objects.filter(
+            Q(borrower=borrower) & Q(lender=lender)
+        ).order_by(
+            "amount")
+
+        for debt in debts:
+            if remaining_repaid_amount <= 0:
+                break
+            debt_amount_before_reduce = debt.amount
+            debt.amount -= remaining_repaid_amount
+            remaining_repaid_amount -= debt_amount_before_reduce
+            debt.delete() if debt.amount <= 0 else debt.save()
+
+        # Looks like the user overpaid. Create a new debt going the other way.
+        if remaining_repaid_amount > 0:
+            Debt.objects.create(amount=remaining_repaid_amount,
+                                lender=borrower,
+                                borrower=lender)
+            reply = Reply(
+                f"{borrower_capitalized} har överbetalat "
+                f"dig med **{remaining_repaid_amount}:-**. En skuld "
+                f"har skapats {borrower_capitalized} har lånat ut *"
+                f"*{remaining_repaid_amount}**:- till "
+                f"{lender_capitalized}.")
+        else:
+            reply = Reply(
+                f"{borrower_capitalized}"
+                f"har minskat sin skuld till dig med **"
+                f"{repaid_amount}**:-.")
+        return reply
         try:
             lender: User = User.get_by_alias_or_username(lender_name).first()
         except (IndexError, ValueError):
