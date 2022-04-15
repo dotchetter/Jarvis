@@ -20,7 +20,7 @@ class UserQuerySet(QuerySet):
     """
     def from_alias(self, alias: str):
         """
-        Get a User instance by it's alias, if applicable.
+        Get a User instance by its alias, if applicable.
         :param alias: str, user alias
         :return: User | None
         """
