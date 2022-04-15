@@ -139,7 +139,7 @@ class Expense(me.Document):
 
 class Debt(me.Document):
     """
-    An outstanding debt from one user to another.
+    An outstanding compensation_amount from one user to another.
     Debts can be accounted for when accounting for expenses,
     as they will inflict 100% of their amount as reduction to
     an initial compensation to the lender.

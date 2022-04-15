@@ -4,11 +4,9 @@ from typing import Union, Collection
 import pandas
 import pyttman
 from mongoengine import QuerySet, Q
-from pyttman.core.ability import Ability
 from pyttman.core.containers import Message, Reply, ReplyStream
 from pyttman.core.entity_parsing.fields import TextEntityField, \
     BoolEntityField, IntEntityField
-from pyttman.core.entity_parsing.identifiers import CapitalizedIdentifier
 from pyttman.core.intent import Intent
 
 from jarvis.abilities.finance.helpers import SharedExpensesApp
@@ -181,85 +179,32 @@ class CalculateSplitExpenses(Intent):
                          f"**{top_paying_bucket.paid_amount}:-** denna månad.")
 
         while buckets:
-            bucket = buckets.pop()
-            bucket_username = bucket.user.username.capitalize()
+            current_bucket = buckets.pop()
+            bucket_username = current_bucket.user.username.capitalize()
 
-            if bucket.paid_amount == top_paying_bucket.paid_amount:
+            if current_bucket.paid_amount == top_paying_bucket.paid_amount:
                 msg = f"{bucket_username} har betalat lika mycket " \
                       f"som {top_paying_username}: **" \
-                      f"{bucket.paid_amount}:-**, ingen kompensation behövs."
+                      f"{current_bucket.paid_amount}:-**, " \
+                      f"ingen kompensation behövs."
             else:
-                msg = f"{bucket_username} har betalat **{bucket.paid_amount}:" \
+                msg = f"{bucket_username} har betalat " \
+                      f"**{current_bucket.paid_amount}:" \
                       f"-**, och ska kompensera {top_paying_username} med " \
-                      f"**{bucket.debt}:-**."
+                      f"**{current_bucket.compensation_amount}:-**."
+
             reply_stream.put(msg)
 
             if message.entities["deduct_debts"] is True:
-                output_base_string = "{0} är skyldig {1} **{2}:-**. Om " \
-                                     "denna ska återbetalas i samband med " \
-                                     "konteringsersättningen, blir " \
-                                     "kompensationen istället **{3}**:-."
+                bucket_after_debts = SharedExpensesApp.calculate_debt_balance(
+                    top_paying_bucket=top_paying_bucket,
+                    comparison_bucket=current_bucket)
 
-                # Find out if the top-paying user owes this user anything.
-                top_paying_bucket_debt_to_user = Debt.objects.filter(
-                    Q(borrower=top_paying_bucket.user) & Q(lender=bucket.user)
-                ).sum("amount")
-
-                # And also, see if the user owes the top-paying user anything
-                user_debt_to_top_paying = Debt.objects.filter(
-                    Q(borrower=bucket.user) & Q(lender=top_paying_bucket.user)
-                ).sum("amount")
-
-                if top_paying_bucket_debt_to_user and not \
-                        user_debt_to_top_paying:
-
-                    adjusted_debt = max(
-                        0, bucket.debt - top_paying_bucket_debt_to_user)
-
-                    reply_stream.put(
-                        output_base_string.format(
-                            top_paying_bucket.user.username.capitalize(),
-                            bucket.user.username.capitalize(),
-                            top_paying_bucket_debt_to_user,
-                            adjusted_debt))
-
-                elif user_debt_to_top_paying and not \
-                        top_paying_bucket_debt_to_user:
-
-                    adjusted_debt = max(
-                        0, bucket.debt + user_debt_to_top_paying)
-
-                    reply_stream.put(
-                        output_base_string.format(
-                            bucket.user.username.capitalize(),
-                            top_paying_bucket.user.username.capitalize(),
-                            user_debt_to_top_paying,
-                            adjusted_debt))
-
-                elif user_debt_to_top_paying and top_paying_bucket_debt_to_user:
-
-                    if user_debt_to_top_paying > \
-                            top_paying_bucket_debt_to_user:
-                        payee = top_paying_bucket.user
-                        payer = bucket.user
-                        adjusted_debt = max(
-                            0,
-                            (user_debt_to_top_paying -
-                             top_paying_bucket_debt_to_user))
-                    else:
-                        payee = bucket.user
-                        payer = top_paying_bucket.user
-                        adjusted_debt = max(
-                            0,
-                            (top_paying_bucket_debt_to_user -
-                             user_debt_to_top_paying))
-
-                    reply_stream.put(
-                        output_base_string.format(
-                            payer.username.capitalize(),
-                            payee.username.capitalize(),
-                            user_debt_to_top_paying,
-                            adjusted_debt))
+                msg = f"Med skulder inräknade blir " \
+                      f"{bucket_username} skyldig {top_paying_username} " \
+                      f"**{bucket_after_debts.compensation_amount}:-** " \
+                      f"istället."
+                reply_stream.put(msg)
 
         return reply_stream
 
@@ -270,27 +215,17 @@ class AddDebt(Intent):
     determined by the message contents.
     """
     example = "Jag har lånat 100 av Katrin"
-    lead = ("lånat", "lånade", "borrowed", "borrow", "debt", "skyldig")
+    lead = ("lånat", "lånade", "borrowed", "borrow", "compensation_amount", "skyldig")
 
     amount = IntEntityField()
     lender = TextEntityField(valid_strings=SharedExpensesApp.enrolled_usernames)
 
     def respond(self, message: Message) -> Reply | ReplyStream:
-        print(message.entities)
-        user_is_lender = False
-        amount = message.entities["amount"]
-        lender = message.entities["lender"]
-
-        if amount is None:
-            return Reply("Du måste ange vem du lånat av, "
-                         "eller vem du lånat ut pengar till.")
+        borrower_name = get_username_from_message(message)
+        lender_name = extract_username(message, "lender")
 
         if (amount := message.entities.get("amount")) is None:
             return Reply("Du måste ange belopp på skulden")
-
-        # Lender mentioned explicitly, borrower is current user implicitly
-        borrower_name = get_username_from_message(message)
-        lender_name = extract_username(message, "lender")
 
         try:
             borrower: User = User.get_by_alias_or_username(
@@ -357,7 +292,7 @@ class GetDebts(Intent):
 
 class RepayDebt(Intent):
     """
-    Allows users to repay an outstanding debt to other users.
+    Allows users to repay an outstanding compensation_amount to other users.
     """
     description = "Återbetalning av en skuld, eller en del av en skuld till " \
                   "en annan användare."
@@ -374,7 +309,7 @@ class RepayDebt(Intent):
         borrower_name: str = message.entities.get("borrower_name")
         remaining_repaid_amount = repaid_amount
         current_user_username = get_username_from_message(message)
-        reply: Reply =
+
         try:
             borrower: User = User.get_by_alias_or_username(
                 borrower_name
@@ -410,7 +345,8 @@ class RepayDebt(Intent):
             remaining_repaid_amount -= debt_amount_before_reduce
             debt.delete() if debt.amount <= 0 else debt.save()
 
-        # Looks like the user overpaid. Create a new debt going the other way.
+        # Looks like the user overpaid.
+        # Create a new compensation_amount going the other way.
         if remaining_repaid_amount > 0:
             Debt.objects.create(amount=remaining_repaid_amount,
                                 lender=borrower,
@@ -423,7 +359,6 @@ class RepayDebt(Intent):
                 f"{lender_capitalized}.")
         else:
             reply = Reply(
-                f"{borrower_capitalized}"
-                f"har minskat sin skuld till dig med **"
-                f"{repaid_amount}**:-.")
+                f"{borrower_capitalized} har minskat sin skuld till dig "
+                f"med **{repaid_amount}**:-.")
         return reply

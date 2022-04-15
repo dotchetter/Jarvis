@@ -3,7 +3,14 @@ import sys
 from pyttman import settings
 from pyttman.core.ability import Ability
 
-from jarvis.abilities.finance.intents import *
+from jarvis.abilities.finance.intents import (
+    AddExpense,
+    GetExpenses,
+    CalculateSplitExpenses,
+    AddDebt,
+    GetDebts,
+    RepayDebt
+)
 
 
 class FinanceAbility(Ability):

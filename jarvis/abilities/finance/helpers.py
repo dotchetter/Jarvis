@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 from typing import Collection
 
-from jarvis.abilities.finance.models import Expense
+from mongoengine import Q
+
+from jarvis.abilities.finance.models import Expense, Debt
 from jarvis.models import AppEnrollment, User
 
 
@@ -19,7 +21,8 @@ class SharedExpensesApp:
     class SharedExpenseBucket:
         user: User
         paid_amount: int
-        debt: int
+        compensation_amount: int
+        outstanding_debt: int
 
     @classmethod
     def enrolled_usernames(cls):
@@ -42,7 +45,7 @@ class SharedExpensesApp:
         for user in enrolled:
             expenses = Expense.get_expenses_for_period_and_user(user=user)
             amount = expenses.sum("price")
-            bucket = cls.SharedExpenseBucket(user, amount, 0)
+            bucket = cls.SharedExpenseBucket(user, amount, 0, 0)
             expense_buckets.append(bucket)
             total_sum += amount
 
@@ -57,8 +60,57 @@ class SharedExpensesApp:
 
         while expense_buckets:
             bucket = expense_buckets.pop()
-            bucket.debt = (quotient - bucket.paid_amount)
+            bucket.compensation_amount = (quotient - bucket.paid_amount)
             processed.append(bucket)
 
         processed.append(top_paying_bucket)
         return processed
+
+    @classmethod
+    def calculate_debt_balance(cls,
+                               top_paying_bucket: SharedExpenseBucket,
+                               comparison_bucket: SharedExpenseBucket):
+        """
+        Get the compensation_amount balance between two users and see who's
+        to compensate whom
+        :return:
+        """
+        # Find out if the top-paying user owes this user anything.
+        top_paying_bucket.outstanding_debt = Debt.objects.filter(
+            Q(borrower=top_paying_bucket.user)
+            &
+            Q(lender=comparison_bucket.user)
+        ).sum("amount")
+
+        # And also, see if the user owes the top-paying user anything
+        comparison_bucket.outstanding_debt = Debt.objects.filter(
+            Q(borrower=comparison_bucket.user)
+            &
+            Q(lender=top_paying_bucket.user)
+        ).sum("amount")
+
+        top_paying_debt_to_user = top_paying_bucket.outstanding_debt
+        user_debt_to_top_paying = comparison_bucket.outstanding_debt
+
+        if top_paying_debt_to_user and not user_debt_to_top_paying:
+            comparison_bucket.compensation_amount -= top_paying_debt_to_user
+
+        elif user_debt_to_top_paying and not top_paying_debt_to_user:
+            comparison_bucket.compensation_amount += user_debt_to_top_paying
+
+        # Both users owe each other money. Find out who owes the most and
+        # cancel out their debts.
+        elif user_debt_to_top_paying and top_paying_debt_to_user:
+            sorted_buckets = sorted((top_paying_bucket, comparison_bucket),
+                                    key=lambda bucket: bucket.outstanding_debt)
+
+            largest_debt_bucket = sorted_buckets.pop()
+            smallest_debt_bucket = sorted_buckets.pop()
+
+            large_bucket_debt = largest_debt_bucket.outstanding_debt
+            small_bucket_debt = smallest_debt_bucket.outstanding_debt
+            debt_after_equalizing = large_bucket_debt - small_bucket_debt
+            debt_after_equalizing = max(0, debt_after_equalizing)
+            comparison_bucket.compensation_amount = debt_after_equalizing
+
+        return comparison_bucket
