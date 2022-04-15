@@ -23,17 +23,15 @@ class SharedExpensesApp:
 
     @classmethod
     def enrolled_usernames(cls):
-        return cls.get_enrolled_users()
+        return list(cls.get_enrolled_users("username"))
 
     @classmethod
     def get_enrolled_users(cls, scalar=None) -> Collection[User]:
         app_enrollment = AppEnrollment.objects.get(shared_expenses=True)
-
-        return User.objects.filter(
-            enrolled_apps=app_enrollment
-        ).scalar(
-            scalar
-        ).all()
+        res = User.objects.filter(enrolled_apps=app_enrollment)
+        if scalar is None:
+            return res.all()
+        return res.scalar(scalar).all()
 
     @classmethod
     def calculate_split(cls):
