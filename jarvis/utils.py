@@ -1,4 +1,4 @@
-from pyttman.core.communication.models.containers import Message
+from pyttman.core.containers import Message
 
 
 def extract_username(message: Message, entity_name: str) -> str:

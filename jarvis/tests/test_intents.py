@@ -1,9 +1,7 @@
 import unittest
-import pyttman
-
 
 # Develop unittests for your intents here
-from pyttman.core.communication.models.containers import Message
+from pyttman.core.containers import Message
 from pyttman.core.storage.basestorage import Storage
 
 from jarvis.abilities.finance.intents import AddExpense

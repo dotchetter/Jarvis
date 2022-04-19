@@ -1,15 +1,12 @@
 from datetime import datetime
-from typing import Union, Any, Collection
+from typing import Union, Collection
 
 import pandas
 import pyttman
 from mongoengine import QuerySet, Q
-from pyttman.core.communication.models.containers import Message, Reply, \
-    ReplyStream
+from pyttman.core.containers import Message, Reply, ReplyStream
 from pyttman.core.entity_parsing.fields import TextEntityField, \
-    BoolEntityField, EntityFieldBase
-from pyttman.core.entity_parsing.identifiers import IntegerIdentifier, \
-    CapitalizedIdentifier
+    BoolEntityField, IntEntityField
 from pyttman.core.intent import Intent
 
 from jarvis.abilities.finance.helpers import SharedExpensesApp
@@ -17,21 +14,6 @@ from jarvis.abilities.finance.models import Expense, Debt
 from jarvis.abilities.finance.month import Month
 from jarvis.models import User
 from jarvis.utils import extract_username, get_username_from_message
-
-
-class CustomIntegerEntityField(EntityFieldBase):
-    """
-    IntegerEntityField classes specialize in finding numbers.
-    The value output type from this EntityField is <int>.
-    """
-    type_cls = int
-    identifier_cls = IntegerIdentifier
-
-    @classmethod
-    def perform_type_conversion(cls, value: str) -> Any:
-        if value is None:
-            return 0
-        return cls.type_cls("".join(i for i in value if i.isdigit()))
 
 
 class AddExpense(Intent):
@@ -56,15 +38,15 @@ class AddExpense(Intent):
               "[Spara ett nytt utlägg för nästa period]: " \
               "Spara utgift nästa månad Kruka till växten 249"
 
-    class EntityParser:
-        expense_name = TextEntityField(span=10)
-        store_for_next_month = BoolEntityField(message_contains=("nästa",
-                                                                 "månad"))
-        expense_value = CustomIntegerEntityField()
-        store_for_username = TextEntityField(prefixes=("for", "för",
-                                                       "user", "användare"))
+    expense_name = TextEntityField(span=10)
+    store_for_next_month = BoolEntityField(message_contains=("nästa",
+                                                             "månad"))
+    expense_value = IntEntityField()
+    store_for_username = TextEntityField(prefixes=("for", "för",
+                                                   "user", "användare"))
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
+        print(pyttman.app.settings)
         expense_name = message.entities.get("expense_name")
         expense_value = message.entities.get("expense_value")
         for_next_month = message.entities.get("store_for_next_month")
@@ -110,35 +92,16 @@ class GetExpenses(Intent):
                   "ange deras namn."
     example = "Visa utgifter för Simon"
 
-    class EntityParser:
-        """
-        Provide users the ability to get the sum of their expenses,
-        and for which month the query is for.
-
-        :field sum_expenses:
-            If this entity is parsed in a message, the user
-            is not interested of the whole list of expenses
-            but the sum for the current period (month).
-
-        :field month:
-            Users can ask for expenses / sum of expenses for
-            a certain month, which is parsed in to this entity.
-
-        :field username_for_query:
-            Users can ask for expenses / sum of expenses for
-            other users than themselves, which is parsed in to
-            this entity.
-        """
-        sum_expenses = BoolEntityField(message_contains=("sum", "summa",
-                                                         "summera",
-                                                         "summerade",
-                                                         "summed", "totalt",
-                                                         "totala", "total"))
-        show_most_recent_expense = BoolEntityField(
-            message_contains=("senaste",))
-        month = TextEntityField(valid_strings=tuple(i.name for i in Month))
-        username_for_query = TextEntityField(prefixes=("for", "för", "user",
-                                                       "användare"))
+    sum_expenses = BoolEntityField(message_contains=("sum", "summa",
+                                                     "summera",
+                                                     "summerade",
+                                                     "summed", "totalt",
+                                                     "totala", "total"))
+    show_most_recent_expense = BoolEntityField(message_contains=("senaste",))
+    month = TextEntityField(valid_strings=tuple(i.name for i in Month))
+    username_for_query = TextEntityField(
+        valid_strings=SharedExpensesApp.enrolled_usernames
+    )
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
         """
@@ -204,8 +167,7 @@ class CalculateSplitExpenses(Intent):
                   "dessa ska kompenseras med för att alla " \
                   "ska ha betalat lika mycket."
 
-    class EntityParser:
-        deduct_debts = BoolEntityField(message_contains=("skuld", "lån"))
+    deduct_debts = BoolEntityField(message_contains=("skuld", "lån"))
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
         reply_stream = ReplyStream()
@@ -217,34 +179,33 @@ class CalculateSplitExpenses(Intent):
                          f"**{top_paying_bucket.paid_amount}:-** denna månad.")
 
         while buckets:
-            bucket = buckets.pop()
-            bucket_username = bucket.user.username.capitalize()
+            current_bucket = buckets.pop()
+            bucket_username = current_bucket.user.username.capitalize()
 
-            if bucket.paid_amount == top_paying_bucket.paid_amount:
+            if current_bucket.paid_amount == top_paying_bucket.paid_amount:
                 msg = f"{bucket_username} har betalat lika mycket " \
                       f"som {top_paying_username}: **" \
-                      f"{bucket.paid_amount}:-**, ingen kompensation behövs."
+                      f"{current_bucket.paid_amount}:-**, " \
+                      f"ingen kompensation behövs."
             else:
-                msg = f"{bucket_username} har betalat **{bucket.paid_amount}:" \
+                msg = f"{bucket_username} har betalat " \
+                      f"**{current_bucket.paid_amount}:" \
                       f"-**, och ska kompensera {top_paying_username} med " \
-                      f"**{bucket.debt}:-**."
+                      f"**{current_bucket.compensation_amount}:-**."
+
             reply_stream.put(msg)
 
             if message.entities["deduct_debts"] is True:
-                # Find out if the top-paying user owes this user anything.
-                top_paying_bucket_debt = Debt.objects.filter(
-                    Q(borrower=top_paying_bucket.user) & Q(lender=bucket.user)
-                ).sum("amount")
+                bucket_after_debts = SharedExpensesApp.calculate_debt_balance(
+                    top_paying_bucket=top_paying_bucket,
+                    comparison_bucket=current_bucket)
 
-                # Don't output negative numbers.
-                debt_if_refund = max(0, bucket.debt - top_paying_bucket_debt)
-                reply_stream.put(
-                    f"{top_paying_bucket.user.username.capitalize()} är skyldig "
-                    f"{bucket.user.username.capitalize()} "
-                    f"**{top_paying_bucket_debt}:-**. "
-                    f"Om denna ska återbetalas i samband med "
-                    f"konteringsersättningen, blir kompensationen istället "
-                    f"**{debt_if_refund}**:-.")
+                msg = f"Med skulder inräknade blir " \
+                      f"{bucket_username} skyldig {top_paying_username} " \
+                      f"**{bucket_after_debts.compensation_amount}:-** " \
+                      f"istället."
+                reply_stream.put(msg)
+
         return reply_stream
 
 
@@ -253,56 +214,15 @@ class AddDebt(Intent):
     Adds a Debt for a user. Who is borrower and lender is
     determined by the message contents.
     """
-    example = "Simon lånade 100:- | " \
-              "Katrin lånade 100 av Simon | " \
-              "jag lånade ut 100 till Katrin | " \
-              "Jag har lånat 100 av Katrin"
-    lead = ("lånat", "lånade", "borrowed", "borrow", "debt", "skyldig")
+    example = "Jag har lånat 100 av Katrin"
+    lead = ("lånat", "lånade", "borrowed", "borrow", "compensation_amount", "skyldig")
 
-    class EntityParser:
-        amount = CustomIntegerEntityField()
-        borrower_third_person = TextEntityField(
-            identifier=CapitalizedIdentifier,
-            suffixes=("av", "från", "by")
-        )
-        lender_third_person = TextEntityField(
-            identifier=CapitalizedIdentifier,
-            prefixes=("av", )
-        )
-        borrower_mentioned_alone = TextEntityField(
-            identifier=CapitalizedIdentifier
-        )
+    amount = IntEntityField()
+    lender = TextEntityField(valid_strings=SharedExpensesApp.enrolled_usernames)
 
     def respond(self, message: Message) -> Reply | ReplyStream:
-        user_is_lender = False
-        amount = message.entities["amount"]
-        borrower_third_person = message.entities["borrower_third_person"]
-        lender_third_person = message.entities["lender_third_person"]
-        borrower_mentioned_alone = message.entities["borrower_mentioned_alone"]
-
-        if amount is None:
-            return Reply("Du måste ange vem du lånat av, "
-                         "eller vem du lånat ut pengar till.")
-
-        if borrower_mentioned_alone and not any((borrower_third_person,
-                                                 lender_third_person)):
-            # The current user is the lender, implicitly.
-            user_is_lender = True
-            lender_name = get_username_from_message(message)
-            borrower_name = extract_username(message,
-                                             "borrower_mentioned_alone")
-        elif borrower_third_person and lender_third_person:
-            # Lender and borrower declared explicitly
-            borrower_name = extract_username(message, "borrower_third_person")
-            lender_name = extract_username(message, "lender_third_person")
-        elif lender_third_person and not any((borrower_third_person,
-                                             borrower_mentioned_alone)):
-            # Lender mentioned explicitly, borrower is current user implicitly
-            borrower_name = get_username_from_message(message)
-            lender_name = extract_username(message, "lender_third_person")
-        else:
-            return Reply("Jag förstod inte vem som lånat av vem.. försök "
-                         "igen. Du kan alltid be om hjälp för att se exempel.")
+        borrower_name = get_username_from_message(message)
+        lender_name = extract_username(message, "lender")
 
         if (amount := message.entities.get("amount")) is None:
             return Reply("Du måste ange belopp på skulden")
@@ -322,11 +242,7 @@ class AddDebt(Intent):
                                f"provided: '{lender_name}'")
             return Reply(self.storage["default_replies"]["no_users_matches"])
 
-        if borrower == lender and user_is_lender:
-            return Reply("Glöm inte att ange vem du lånade pengar från.")
-
         Debt.objects.create(borrower=borrower, lender=lender, amount=amount)
-
         return Reply(f"Okej, jag har antecknat att "
                      f"{borrower.username.capitalize()} "
                      f"har lånat {amount}:- av "
@@ -341,8 +257,9 @@ class GetDebts(Intent):
     lead = ("visa", "lista", "show", "get", "hämta")
     trail = ("skuld", "skulder", "debts", "lån", "lånat", "lånade")
 
-    class EntityParser:
-        borrower_name = TextEntityField(identifier=CapitalizedIdentifier)
+    borrower_name = TextEntityField(
+        valid_strings=SharedExpensesApp.enrolled_usernames,
+    )
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         reply_stream = ReplyStream()
@@ -375,33 +292,43 @@ class GetDebts(Intent):
 
 class RepayDebt(Intent):
     """
-    Allows users to repay an outstanding debt to other users.
+    Allows users to repay an outstanding compensation_amount to other users.
     """
     description = "Återbetalning av en skuld, eller en del av en skuld till " \
                   "en annan användare."
     example = "jag har betalat tillbaka 100:- till <användare>"
     lead = ("betalat", "betala", "återbetalat", "kompensera", "kompenserat")
 
-    class EntityParser:
-        lender_name = TextEntityField(identifier=CapitalizedIdentifier)
-        repaid_amount = CustomIntegerEntityField()
+    repaid_amount = IntEntityField()
+    borrower_name = TextEntityField(
+        valid_strings=SharedExpensesApp.enrolled_usernames
+    )
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         repaid_amount: int = message.entities.get("repaid_amount")
-        lender_name: str = message.entities.get("lender_name")
+        borrower_name: str = message.entities.get("borrower_name")
         remaining_repaid_amount = repaid_amount
         current_user_username = get_username_from_message(message)
 
         try:
-            lender: User = User.get_by_alias_or_username(lender_name).first()
+            borrower: User = User.get_by_alias_or_username(
+                borrower_name
+            ).first()
         except (IndexError, ValueError):
-            pyttman.logger.log(f"Lender not found for entity "
-                               f"provided: '{lender_name}'")
+            pyttman.logger.log(f"Borrower not found for entity "
+                               f"provided: '{borrower_name}'")
             return Reply(self.storage["default_replies"]["no_users_matches"])
 
-        borrower: User = User.get_by_alias_or_username(
+        lender: User = User.get_by_alias_or_username(
             current_user_username
         ).first()
+
+        if lender == borrower:
+            return Reply("Endast lånegivaren kan registrera en inbetald "
+                         "skuld.")
+
+        borrower_capitalized = borrower.username.capitalize()
+        lender_capitalized = lender.username.capitalize()
 
         # Get debts common to this borrower and lender
         # Order the debts by amount, desc
@@ -418,19 +345,20 @@ class RepayDebt(Intent):
             remaining_repaid_amount -= debt_amount_before_reduce
             debt.delete() if debt.amount <= 0 else debt.save()
 
-        # Looks like the user overpaid. Create a new debt going the other way.
+        # Looks like the user overpaid.
+        # Create a new compensation_amount going the other way.
         if remaining_repaid_amount > 0:
             Debt.objects.create(amount=remaining_repaid_amount,
                                 lender=borrower,
                                 borrower=lender)
             reply = Reply(
-                f"Du har överbetalat {lender.username.capitalize()} med "
-                f"**{remaining_repaid_amount}:-**. En skuld har skapats "
-                f"där du lånat ut **{remaining_repaid_amount}**:- till "
-                f"{lender.username.capitalize()}.")
+                f"{borrower_capitalized} har överbetalat "
+                f"dig med **{remaining_repaid_amount}:-**. En skuld "
+                f"har skapats {borrower_capitalized} har lånat ut *"
+                f"*{remaining_repaid_amount}**:- till "
+                f"{lender_capitalized}.")
         else:
             reply = Reply(
-                f"Du har minskat din skuld till **"
-                f"{lender.username.capitalize()}** med **"
-                f"{repaid_amount}**:-.")
+                f"{borrower_capitalized} har minskat sin skuld till dig "
+                f"med **{repaid_amount}**:-.")
         return reply

@@ -1,10 +1,16 @@
 import sys
 
-import mongoengine
 from pyttman import settings
 from pyttman.core.ability import Ability
 
-from jarvis.abilities.finance.intents import *
+from jarvis.abilities.finance.intents import (
+    AddExpense,
+    GetExpenses,
+    CalculateSplitExpenses,
+    AddDebt,
+    GetDebts,
+    RepayDebt
+)
 
 
 class FinanceAbility(Ability):
@@ -23,18 +29,11 @@ class FinanceAbility(Ability):
                GetDebts,
                RepayDebt)
 
-    def configure(self) -> None:
+    def before_create(self) -> None:
         """
         Configure hook method, executed before the app starts
         :return: None
         """
-        # Connect to the appropriate MongoDB Atlas database
-        if settings.DEV_MODE:
-            settings.MONGO_DB_CONFIG["db"] = settings.DB_NAME_DEV
-        else:
-            settings.MONGO_DB_CONFIG["db"] = settings.DB_NAME_PROD
-
-        mongoengine.connect(**settings.MONGO_DB_CONFIG)
 
         # Set up a default reply when no expenses are found
         self.storage.put("default_replies",
@@ -48,8 +47,3 @@ class FinanceAbility(Ability):
                                                  "Om du inte angav något, "
                                                  "kontrollera att du är "
                                                  "registrerad."})
-
-        if settings.INTERACTIVE_SHELL is True:
-            import IPython
-            IPython.embed()
-            sys.exit(0)
