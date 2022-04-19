@@ -6,11 +6,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DEV_MODE = True
+DEV_MODE = False
 
-INTERACTIVE_SHELL = False
-
-# Selection is performed in
 DB_NAME_PROD = os.getenv("MONGO_DB_NAME_PROD")
 DB_NAME_DEV = os.getenv("MONGO_DB_NAME_DEV")
 
@@ -50,5 +47,5 @@ LOG_FILE_DIR = APP_BASE_DIR / Path("logs")
 
 LOG_TO_STDOUT = True
 APP_NAME = "jarvis"
-APP_VERSION = "1.0.9.2"
+APP_VERSION = "1.1.0a"
 TIME_ZONE = datetime.utcnow().astimezone().tzinfo
