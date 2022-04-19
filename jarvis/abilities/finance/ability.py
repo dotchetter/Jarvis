@@ -47,8 +47,3 @@ class FinanceAbility(Ability):
                                                  "Om du inte angav något, "
                                                  "kontrollera att du är "
                                                  "registrerad."})
-
-        if settings.INTERACTIVE_SHELL is True:
-            import IPython
-            IPython.embed()
-            sys.exit(0)
