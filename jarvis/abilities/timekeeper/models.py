@@ -21,7 +21,7 @@ class WorkShift(me.Document, PrettyReprMixin):
     end = me.DateTimeField(default=None, null=True)
     is_active = me.BooleanField(default=True)
     is_consumed = me.BooleanField(default=False)
-    created_date = me.DateField(default=lambda: datetime.now())
+    created_date = me.DateField(default=lambda: datetime.now().date())
 
     @property
     def duration(self) -> time:

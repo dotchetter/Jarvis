@@ -8,7 +8,6 @@ from pyttman.core.containers import (
 
 from jarvis.models import User
 from jarvis.abilities.finance.models import Expense
-from jarvis.utils import get_username_from_message
 
 
 class DevInfo(Intent):
@@ -39,19 +38,15 @@ class UserInfo(Intent):
     description = "Visar information för dig, som lagras i Jarvis!"
 
     def respond(self, message: Message) -> Reply | ReplyStream:
-
-        username_for_query = get_username_from_message(message)
-        try:
-            user = User.get_by_alias_or_username(username_for_query).first()
-        except (IndexError, ValueError):
+        if user := User.objects.from_message(message) is None:
             return Reply("Det finns ingen information om dig")
-        else:
-            expenses_for_user = Expense.objects.filter(user_reference=user).all()
-            expenses_sum = expenses_for_user.sum('price')
-            expenses_count = expenses_for_user.count()
-            finance_info = f"Du har sparat **{expenses_count}** " \
-                           f"utgifter totalt, till en totalsumma värd " \
-                           f"**{expenses_sum}** kronor, inte dåligt!"
+
+        expenses_for_user = Expense.objects.filter(user_reference=user).all()
+        expenses_sum = expenses_for_user.sum('price')
+        expenses_count = expenses_for_user.count()
+        finance_info = f"Du har sparat **{expenses_count}** " \
+                       f"utgifter totalt, till en totalsumma värd " \
+                       f"**{expenses_sum}** kronor, inte dåligt!"
 
         aliases = ", ".join(user.aliases)
         alias_info = f"Kärt barn har **många namn!** Du har " \

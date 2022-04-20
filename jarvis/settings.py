@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 
+import certifi
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -34,6 +35,14 @@ ABILITIES = [
     "jarvis.abilities.timekeeper.ability.TimeKeeper",
 ]
 
+DATABASE = {
+    "tlsCAFile": certifi.where(),
+    "db": None,  # Configured in Ability 'Configure' hook
+    "host": os.getenv("MONGO_DB_URL"),
+    "username": os.getenv("MONGO_DB_USER"),
+    "password": os.getenv("MONGO_DB_PASSWORD"),
+    "port": int(os.getenv("MONGO_DB_PORT")),
+}
 
 CLIENT = {
     "class": "pyttman.clients.community.discord.client.DiscordClient",
@@ -47,5 +56,5 @@ LOG_FILE_DIR = APP_BASE_DIR / Path("logs")
 
 LOG_TO_STDOUT = True
 APP_NAME = "jarvis"
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.2.1"
 TIME_ZONE = datetime.utcnow().astimezone().tzinfo
