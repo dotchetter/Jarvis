@@ -46,7 +46,6 @@ class AddExpense(Intent):
                                                    "user", "användare"))
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
-        print(pyttman.app.settings)
         expense_name = message.entities.get("expense_name")
         expense_value = message.entities.get("expense_value")
         for_next_month = message.entities.get("store_for_next_month")
@@ -61,7 +60,7 @@ class AddExpense(Intent):
             account_for_date += pandas.DateOffset(months=1)
 
         try:
-            user = User.get_by_alias_or_username(store_for_username).first()
+            user = User.objects.from_username_or_alias(store_for_username)
         except (IndexError, ValueError):
             pyttman.logger.log(f"No db User matched: {store_for_username}")
             return Reply(self.storage["default_replies"]["no_users_matches"])
@@ -116,7 +115,7 @@ class GetExpenses(Intent):
         get_latest = message.entities["show_most_recent_expense"]
 
         try:
-            user = User.get_by_alias_or_username(username_for_query).first()
+            user = User.objects.from_username_or_alias(username_for_query)
         except (IndexError, ValueError):
             pyttman.logger.log(f"No db User matched: {username_for_query}")
             return Reply(self.storage["default_replies"]["no_users_matches"])
@@ -221,22 +220,16 @@ class AddDebt(Intent):
     lender = TextEntityField(valid_strings=SharedExpensesApp.enrolled_usernames)
 
     def respond(self, message: Message) -> Reply | ReplyStream:
-        borrower_name = get_username_from_message(message)
         lender_name = extract_username(message, "lender")
+
+        if borrower := User.objects.from_message(message) is None:
+            return Reply(self.storage["default_replies"]["no_users_matches"])
 
         if (amount := message.entities.get("amount")) is None:
             return Reply("Du måste ange belopp på skulden")
 
         try:
-            borrower: User = User.get_by_alias_or_username(
-                borrower_name).first()
-        except (IndexError, ValueError):
-            pyttman.logger.log(f"Borrower not found for entity "
-                               f"provided: '{borrower_name}'")
-            return Reply(self.storage["default_replies"]["no_users_matches"])
-
-        try:
-            lender: User = User.get_by_alias_or_username(lender_name).first()
+            lender: User = User.objects.from_username_or_alias(lender_name)
         except (IndexError, ValueError):
             pyttman.logger.log(f"Lender not found for entity "
                                f"provided: '{lender_name}'")
@@ -265,7 +258,7 @@ class GetDebts(Intent):
         reply_stream = ReplyStream()
         debts_by_lender: dict[User, int] = {}
         borrower_name = extract_username(message, "borrower_name")
-        borrower: User = User.get_by_alias_or_username(borrower_name).first()
+        borrower: User = User.objects.from_username_or_alias(borrower_name)
         debt_sum = Debt.objects.filter(borrower=borrower).sum("amount")
 
         if debt_sum == 0:
@@ -308,20 +301,14 @@ class RepayDebt(Intent):
         repaid_amount: int = message.entities.get("repaid_amount")
         borrower_name: str = message.entities.get("borrower_name")
         remaining_repaid_amount = repaid_amount
-        current_user_username = get_username_from_message(message)
+        lender = User.objects.from_message(message)
 
         try:
-            borrower: User = User.get_by_alias_or_username(
-                borrower_name
-            ).first()
+            borrower: User = User.objects.from_username_or_alias(borrower_name)
         except (IndexError, ValueError):
             pyttman.logger.log(f"Borrower not found for entity "
                                f"provided: '{borrower_name}'")
             return Reply(self.storage["default_replies"]["no_users_matches"])
-
-        lender: User = User.get_by_alias_or_username(
-            current_user_username
-        ).first()
 
         if lender == borrower:
             return Reply("Endast lånegivaren kan registrera en inbetald "
