@@ -38,7 +38,7 @@ class UserInfo(Intent):
     description = "Visar information för dig, som lagras i Jarvis!"
 
     def respond(self, message: Message) -> Reply | ReplyStream:
-        if user := User.objects.from_message(message) is None:
+        if (user := User.objects.from_message(message)) is None:
             return Reply("Det finns ingen information om dig")
 
         expenses_for_user = Expense.objects.filter(user_reference=user).all()
