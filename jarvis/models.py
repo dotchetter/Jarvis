@@ -36,7 +36,8 @@ class UserQuerySet(QuerySet):
             name = message.author.id
         except AttributeError:
             name = message.author
-        return self.from_username_or_alias(name)
+        sanitized_name = Message(name).sanitized_content().pop()
+        return self.from_username_or_alias(sanitized_name)
 
 
 class AppEnrollment(me.Document):
