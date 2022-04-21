@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from mongoengine import Q
 from pyttman.core.ability import Ability
 
@@ -18,10 +20,11 @@ class TimeKeeper(Ability):
         and sums up the total amount of billable hours for all workshifts
         registered this same day.
         """
+        today = datetime.now().date()
         billable_hours, billable_minutes = 0, 0
         current_user = User.objects.from_message(message)
         workshifts = WorkShift.objects.filter(
-            Q(user=current_user) & Q(is_consumed=True)
+            Q(user=current_user) & Q(is_consumed=True) & Q(created_date=today)
         ).all()
 
         for shift in workshifts:

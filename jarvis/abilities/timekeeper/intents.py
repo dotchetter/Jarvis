@@ -74,7 +74,7 @@ class GetWorkshift(Intent):
     Get information about a currently running work shift.
     """
     lead = ("visa", "hämta",)
-    trail = ("pass", "arbetspass", "skift",)
+    trail = ("pass", "arbetspass", "skift", "timmar")
 
     sum_for_today = BoolEntityField(
         message_contains=("totalt", "total", "summa")
