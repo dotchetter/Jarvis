@@ -222,7 +222,7 @@ class AddDebt(Intent):
     def respond(self, message: Message) -> Reply | ReplyStream:
         lender_name = extract_username(message, "lender")
 
-        if borrower := User.objects.from_message(message) is None:
+        if (borrower := User.objects.from_message(message)) is None:
             return Reply(self.storage["default_replies"]["no_users_matches"])
 
         if (amount := message.entities.get("amount")) is None:

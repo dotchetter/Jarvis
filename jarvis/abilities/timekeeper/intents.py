@@ -15,7 +15,7 @@ class StartStopWatch(Intent):
     trail = ("arbetspass", "pass", "skift", "jobb", "jobba", "arbeta")
 
     def respond(self, message: Message) -> Reply | ReplyStream:
-        if current_user := User.objects.from_message(message) is None:
+        if (current_user := User.objects.from_message(message)) is None:
             return Reply("Jag vet inte vem frågan gäller?")
 
         if complaint := self.complain_if_workshift_exists(current_user):
@@ -53,7 +53,7 @@ class StopStopWatch(Intent):
              "arbeta", "rast", "paus", "lunch", "vila", "rasten")
 
     def respond(self, message: Message) -> Reply | ReplyStream:
-        if current_user := User.objects.from_message(message) is None:
+        if (current_user := User.objects.from_message(message)) is None:
             return Reply("Jag vet inte vem frågan gäller?")
 
         shift: WorkShift = WorkShift.objects.filter(
