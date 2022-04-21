@@ -56,5 +56,5 @@ LOG_FILE_DIR = APP_BASE_DIR / Path("logs")
 
 LOG_TO_STDOUT = True
 APP_NAME = "jarvis"
-APP_VERSION = "1.2.1"
+APP_VERSION = "1.2.2"
 TIME_ZONE = datetime.utcnow().astimezone().tzinfo
