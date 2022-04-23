@@ -1,20 +1,16 @@
-from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from datetime import time
 
 import mongoengine as me
-from datetime import datetime, timedelta
-
-from pyttman.core.mixins import PrettyReprMixin
 
 from jarvis.models import User
 
 
-class WorkShift(me.Document, PrettyReprMixin):
+class WorkShift(me.Document):
     """
     the WorkShift model holds a period in time for a user.
     StopWatch instances have a beginning and an end.
     """
-    __repr_fields__ = ("beginning", "end", "is_active", "is_consumed")
 
     user = me.ReferenceField(User, required=True)
     beginning = me.DateTimeField(default=None, null=True)
