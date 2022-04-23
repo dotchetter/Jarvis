@@ -47,10 +47,11 @@ class StopStopWatch(Intent):
     """
     Ends a current WorkShift or Intermission.
     """
-    lead = ("avsluta", "stanna", "sluta", "stopp",
-            "stoppa", "ta", "tagit", "tar")
+    lead = ("avsluta", "stanna", "sluta", "slutar",
+            "stopp", "stoppa", "ta", "tagit", "tar")
     trail = ("arbetspass", "pass", "skift", "jobb", "jobba",
-             "arbeta", "rast", "paus", "lunch", "vila", "rasten")
+             "arbeta", "rast", "paus", "lunch", "vila", "rasten",
+             "jag")
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         if (current_user := User.objects.from_message(message)) is None:
@@ -73,24 +74,34 @@ class GetWorkshift(Intent):
     """
     Get information about a currently running work shift.
     """
-    lead = ("visa", "hämta",)
-    trail = ("pass", "arbetspass", "skift", "timmar")
+    lead = ("visa", "hämta", "hur",)
+    trail = ("pass", "arbetspass", "skift", "timmar", "jobbat")
 
-    sum_for_today = BoolEntityField(
-        message_contains=("totalt", "total", "summa")
-    )
+    sum_for_today = BoolEntityField(message_contains=("idag", "idag?"))
+    sum_for_month = BoolEntityField(message_contains=("månad", "månaden"))
 
     def respond(self, message: Message) -> Reply | ReplyStream:
+        base_reply_string = "Totalt har du jobbat in {} timmar {}"
+        current_user = User.objects.from_message(message)
+        sum_for_today = message.entities["sum_for_today"]
+        sum_for_month = message.entities["sum_for_month"]
+
+        if not any((sum_for_month, sum_for_today)):
+            if (active_shift := self.ability.get_currently_active_workshift(
+                    current_user)) is None:
+                return Reply("Du har inget aktivt arbetspass")
+            shift_duration = active_shift.duration
+            return Reply("Du har ett aktivt arbetspass som pågått "
+                         f"{shift_duration.hour} timmar, "
+                         f"{shift_duration.minute} minuter och "
+                         f"{shift_duration.second} sekunder.")
+
         if message.entities["sum_for_today"] is True:
-            hours = self.ability.get_total_billable_hours(message)
-            return Reply(f"Totalt har du arbetat in {hours} timmar idag.")
-
-        workshift = self.ability.get_currently_active_workshift(message)
-        if workshift is None:
-            return Reply("Du har inget aktivt arbetspass")
-
-        shift_duration = workshift.duration
-        return Reply("Du har ett aktivt arbetspass som pågått "
-                     f"{shift_duration.hour} timmar, "
-                     f"{shift_duration.minute} minuter och "
-                     f"{shift_duration.second} sekunder.")
+            shifts = self.ability.get_workshifts_for_today(current_user)
+            hours = self.ability.get_total_billable_hours(*shifts)
+            base_reply_string = base_reply_string.format(hours, "idag")
+        elif message.entities["sum_for_month"] is True:
+            shifts = self.ability.get_workshifts_for_current_month(current_user)
+            hours = self.ability.get_total_billable_hours(*shifts)
+            base_reply_string = base_reply_string.format(hours, "denna månad")
+        return Reply(base_reply_string)

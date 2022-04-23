@@ -1,6 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timedelta, date
+from typing import Sequence
 
-from mongoengine import Q
+from dateutil.relativedelta import relativedelta
+from mongoengine import Q, QuerySet
 from pyttman.core.ability import Ability
 
 from jarvis.abilities.timekeeper.models import WorkShift
@@ -14,19 +16,12 @@ class TimeKeeper(Ability):
     intents = (StartStopWatch, StopStopWatch, GetWorkshift)
 
     @staticmethod
-    def get_total_billable_hours(message) -> int:
+    def get_total_billable_hours(*workshifts: Sequence[WorkShift]) -> int:
         """
-        Sums up the committed workshifts for the current user for today,
-        and sums up the total amount of billable hours for all workshifts
-        registered this same day.
+        Returns the total amount of billable hours for all workshifts
+        provided.
         """
-        today = datetime.now().date()
-        billable_hours, billable_minutes = 0, 0
-        current_user = User.objects.from_message(message)
-        workshifts = WorkShift.objects.filter(
-            Q(user=current_user) & Q(is_consumed=True) & Q(created_date=today)
-        ).all()
-
+        billable_hours = billable_minutes = 0
         for shift in workshifts:
             duration = shift.duration
             billable_hours += duration.hour
@@ -36,13 +31,58 @@ class TimeKeeper(Ability):
                 billable_minutes -= 30
         return billable_hours
 
+    @classmethod
+    def get_workshifts_for_current_month(cls, user: User) -> list[WorkShift]:
+        """
+        Get all workshifts for a user, which are all recorded in the
+        current month and have been consumed,
+        :param user: User owning the WorkShifts
+        """
+        first_day_of_month = last_day_of_month = datetime.now().date()
+        last_day_of_month += relativedelta(months=1, day=1, days=-1)
+        first_day_of_month += relativedelta(day=1)
+        workshifts = cls.get_work_shifts_between_dates(first_day_of_month,
+                                                       last_day_of_month)
+        return workshifts.filter(user=user).all()
+
+    @classmethod
+    def get_workshifts_for_today(cls, user: User) -> list[WorkShift]:
+        """
+        Get all workshifts for a user, which are all recorded in the
+        current month and have been consumed,
+        :param user: User owning the WorkShifts
+        """
+        today = datetime.now().date()
+        workshifts = cls.get_work_shifts_between_dates(today, today)
+        return workshifts.filter(user=user).all()
+
+    @classmethod
+    def get_work_shifts_between_dates(cls, start_date: date,
+                                      end_date: date) -> QuerySet:
+        """
+        Returns WorkShift objects which were created in a datetime span
+        inclusively, and is consumed, meaning they're not active.
+
+        :param start_date: The oldest day for WorkShifts to be included
+        :param end_date: The most recent day for WorkShifts to be included
+        """
+        return WorkShift.objects.filter(
+            Q(created_date__gte=start_date)
+            &
+            Q(created_date__lte=end_date)
+            &
+            Q(is_consumed=True))
+
     @staticmethod
-    def get_currently_active_workshift(message) -> WorkShift | None:
+    def get_total_billable_hours_for_month() -> int:
+        pass
+
+    @staticmethod
+    def get_currently_active_workshift(user: User) -> WorkShift | None:
         """
         Returns the currently active workshift for a User,
         if there is any.
         """
-        current_user = User.objects.from_message(message)
         return WorkShift.objects.filter(
-            Q(user=current_user) & Q(is_active=True)
+            Q(user=user) & Q(is_active=True)
         ).first()
