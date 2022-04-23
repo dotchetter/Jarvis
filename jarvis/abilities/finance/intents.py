@@ -13,7 +13,7 @@ from jarvis.abilities.finance.helpers import SharedExpensesApp
 from jarvis.abilities.finance.models import Expense, Debt
 from jarvis.abilities.finance.month import Month
 from jarvis.models import User
-from jarvis.utils import extract_username, get_username_from_message
+from jarvis.utils import extract_username
 
 
 class AddExpense(Intent):
