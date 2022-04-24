@@ -1,19 +1,25 @@
-from datetime import datetime, timedelta, date
+from datetime import datetime, date
 from typing import Sequence
 
 from dateutil.relativedelta import relativedelta
 from mongoengine import Q, QuerySet
 from pyttman.core.ability import Ability
 
+from jarvis.abilities.timekeeper.intents import (
+    StartStopWatch,
+    StopStopWatch,
+    GetWorkshift,
+    CreateWorkshiftsFromString
+)
 from jarvis.abilities.timekeeper.models import WorkShift
 from jarvis.models import User
-from jarvis.abilities.timekeeper.intents import (
-    StartStopWatch, StopStopWatch, GetWorkshift
-)
 
 
 class TimeKeeper(Ability):
-    intents = (StartStopWatch, StopStopWatch, GetWorkshift)
+    intents = (StartStopWatch,
+               StopStopWatch,
+               GetWorkshift,
+               CreateWorkshiftsFromString)
 
     @staticmethod
     def get_total_billable_hours(*workshifts: Sequence[WorkShift]) -> int:
@@ -38,12 +44,11 @@ class TimeKeeper(Ability):
         current month and have been consumed,
         :param user: User owning the WorkShifts
         """
-        first_day_of_month = last_day_of_month = datetime.now().date()
-        last_day_of_month += relativedelta(months=1, day=1, days=-1)
-        first_day_of_month += relativedelta(day=1)
-        workshifts = cls.get_work_shifts_between_dates(first_day_of_month,
-                                                       last_day_of_month)
-        return workshifts.filter(user=user).all()
+        return WorkShift.objects.filter(
+            user=user,
+            month=datetime.now().month,
+            year=datetime.now().year
+        ).all()
 
     @classmethod
     def get_workshifts_for_today(cls, user: User) -> list[WorkShift]:
@@ -52,9 +57,12 @@ class TimeKeeper(Ability):
         current month and have been consumed,
         :param user: User owning the WorkShifts
         """
-        today = datetime.now().date()
-        workshifts = cls.get_work_shifts_between_dates(today, today)
-        return workshifts.filter(user=user).all()
+        return WorkShift.objects.filter(
+            user=user,
+            month=datetime.now().month,
+            year=datetime.now().year,
+            day=datetime.now().day
+        ).all()
 
     @classmethod
     def get_work_shifts_between_dates(cls, start_date: date,
@@ -66,12 +74,9 @@ class TimeKeeper(Ability):
         :param start_date: The oldest day for WorkShifts to be included
         :param end_date: The most recent day for WorkShifts to be included
         """
-        return WorkShift.objects.filter(
-            Q(created_date__gte=start_date)
-            &
-            Q(created_date__lte=end_date)
-            &
-            Q(is_consumed=True))
+        return WorkShift.objects.filter(year=start_date.year,
+                                        end__lte=end_date,
+                                        is_consumed=True)
 
     @staticmethod
     def get_total_billable_hours_for_month() -> int:
