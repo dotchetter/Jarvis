@@ -1,6 +1,3 @@
-import sys
-
-from pyttman import settings
 from pyttman.core.ability import Ability
 
 from jarvis.abilities.finance.intents import (
