@@ -1,6 +1,12 @@
+from datetime import datetime
+
+import pyttman
 from mongoengine import Q
+from pyttman import app
 from pyttman.core.containers import ReplyStream, Reply, Message
-from pyttman.core.entity_parsing.fields import BoolEntityField
+from pyttman.core.entity_parsing.fields import BoolEntityField, \
+    StringEntityField
+from pyttman.core.entity_parsing.identifiers import DateTimeStringIdentifier
 from pyttman.core.intent import Intent
 
 from jarvis.abilities.timekeeper.models import WorkShift
@@ -47,10 +53,11 @@ class StopStopWatch(Intent):
     """
     Ends a current WorkShift or Intermission.
     """
-    lead = ("avsluta", "stanna", "sluta", "stopp",
-            "stoppa", "ta", "tagit", "tar")
+    lead = ("avsluta", "stanna", "sluta", "slutar",
+            "stopp", "stoppa", "ta", "tagit", "tar")
     trail = ("arbetspass", "pass", "skift", "jobb", "jobba",
-             "arbeta", "rast", "paus", "lunch", "vila", "rasten")
+             "arbeta", "rast", "paus", "lunch", "vila", "rasten",
+             "jag")
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         if (current_user := User.objects.from_message(message)) is None:
@@ -73,24 +80,69 @@ class GetWorkshift(Intent):
     """
     Get information about a currently running work shift.
     """
-    lead = ("visa", "hämta",)
-    trail = ("pass", "arbetspass", "skift", "timmar")
+    lead = ("visa", "hämta", "hur",)
+    trail = ("pass", "arbetspass", "skift", "timmar", "jobbat")
 
-    sum_for_today = BoolEntityField(
-        message_contains=("totalt", "total", "summa")
-    )
+    sum_for_today = BoolEntityField(message_contains=("idag", "idag?"))
+    sum_for_month = BoolEntityField(message_contains=("månad", "månaden",
+                                                      "månad?", "månaden?"))
 
     def respond(self, message: Message) -> Reply | ReplyStream:
+        base_reply_string = "Totalt har du jobbat in {} timmar {}"
+        current_user = User.objects.from_message(message)
+        sum_for_today = message.entities["sum_for_today"]
+        sum_for_month = message.entities["sum_for_month"]
+
+        if not any((sum_for_month, sum_for_today)):
+            if (active_shift := self.ability.get_currently_active_workshift(
+                    current_user)) is None:
+                return Reply("Du har inget aktivt arbetspass")
+            shift_duration = active_shift.duration
+            return Reply("Du har ett aktivt arbetspass som pågått "
+                         f"{shift_duration.hour} timmar, "
+                         f"{shift_duration.minute} minuter och "
+                         f"{shift_duration.second} sekunder.")
+
         if message.entities["sum_for_today"] is True:
-            hours = self.ability.get_total_billable_hours(message)
-            return Reply(f"Totalt har du arbetat in {hours} timmar idag.")
+            shifts = self.ability.get_workshifts_for_today(current_user)
+            hours = self.ability.get_total_billable_hours(*shifts)
+            base_reply_string = base_reply_string.format(hours, "idag")
+        elif message.entities["sum_for_month"] is True:
+            shifts = self.ability.get_workshifts_for_current_month(current_user)
+            hours = self.ability.get_total_billable_hours(*shifts)
+            base_reply_string = base_reply_string.format(hours, "denna månad")
+        return Reply(base_reply_string)
 
-        workshift = self.ability.get_currently_active_workshift(message)
-        if workshift is None:
-            return Reply("Du har inget aktivt arbetspass")
 
-        shift_duration = workshift.duration
-        return Reply("Du har ett aktivt arbetspass som pågått "
-                     f"{shift_duration.hour} timmar, "
-                     f"{shift_duration.minute} minuter och "
-                     f"{shift_duration.second} sekunder.")
+class CreateWorkshiftsFromString(Intent):
+
+    lead = ("lägg", "spara", "skapa")
+    trail = ("pass", "arbetspass", "skift", "timmar")
+
+    from_datetime = StringEntityField(identifier=DateTimeStringIdentifier)
+    to_datetime = StringEntityField(identifier=DateTimeStringIdentifier)
+
+    def respond(self, message: Message) -> Reply | ReplyStream:
+        datetime_format = "%Y-%m-%d-%H:%M"# app.settings.DATETIME_FORMAT
+        current_user = User.objects.from_message(message)
+        from_datetime = message.entities["from_datetime"]
+        to_datetime = message.entities["to_datetime"]
+        if not from_datetime and to_datetime:
+            return Reply("Ange när arbetspasset började och slutade. "
+                         "Format: YYYY-MM-DD-hh-mm")
+
+        try:
+            beginning = datetime.strptime(from_datetime, datetime_format)
+            end = datetime.strptime(to_datetime, datetime_format)
+        except Exception as e:
+            pyttman.logger.log(str(e), "error")
+            return Reply("Jag kunde inte förstå datumen tyvärr :(")
+
+        workshift = WorkShift.objects.create(user=current_user,
+                                             is_active=False,
+                                             is_consumed=True,
+                                             beginning=beginning,
+                                             end=end)
+        return Reply("OK! Jag har sparat ett arbetspass från "
+                     f"{workshift.beginning} till "
+                     f"{workshift.end} :slight_smile:")
