@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 
 import pyttman
 from mongoengine import Q
@@ -92,7 +93,6 @@ class GetWorkshift(Intent):
         current_user = User.objects.from_message(message)
         sum_for_today = message.entities["sum_for_today"]
         sum_for_month = message.entities["sum_for_month"]
-
         if not any((sum_for_month, sum_for_today)):
             if (active_shift := self.ability.get_currently_active_workshift(
                     current_user)) is None:

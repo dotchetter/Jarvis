@@ -1,7 +1,7 @@
 from datetime import datetime, date
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Sequence
 
-from dateutil.relativedelta import relativedelta
 from mongoengine import Q, QuerySet
 from pyttman.core.ability import Ability
 
@@ -22,7 +22,7 @@ class TimeKeeper(Ability):
                CreateWorkshiftsFromString)
 
     @staticmethod
-    def get_total_billable_hours(*workshifts: Sequence[WorkShift]) -> int:
+    def get_total_billable_hours(*workshifts: Sequence[WorkShift]) -> Decimal:
         """
         Returns the total amount of billable hours for all workshifts
         provided.
@@ -32,10 +32,9 @@ class TimeKeeper(Ability):
             duration = shift.duration
             billable_hours += duration.hour
             billable_minutes += duration.minute
-            if billable_minutes >= 30:
-                billable_hours += 0.5
-                billable_minutes -= 30
-        return billable_hours
+        billable_hours += billable_minutes / 60
+        return Decimal(billable_hours).quantize(Decimal('.00'),
+                                                rounding=ROUND_HALF_UP)
 
     @classmethod
     def get_workshifts_for_current_month(cls, user: User) -> list[WorkShift]:
@@ -77,10 +76,6 @@ class TimeKeeper(Ability):
         return WorkShift.objects.filter(year=start_date.year,
                                         end__lte=end_date,
                                         is_consumed=True)
-
-    @staticmethod
-    def get_total_billable_hours_for_month() -> int:
-        pass
 
     @staticmethod
     def get_currently_active_workshift(user: User) -> WorkShift | None:
