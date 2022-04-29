@@ -42,8 +42,9 @@ class AddExpense(Intent):
     store_for_next_month = BoolEntityField(message_contains=("nästa",
                                                              "månad"))
     expense_value = IntEntityField()
-    store_for_username = TextEntityField(prefixes=("for", "för",
-                                                   "user", "användare"))
+    store_for_username = TextEntityField(
+        valid_strings=SharedExpensesApp.enrolled_usernames
+    )
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
         expense_name = message.entities.get("expense_name")
@@ -59,9 +60,8 @@ class AddExpense(Intent):
         if for_next_month:
             account_for_date += pandas.DateOffset(months=1)
 
-        try:
-            user = User.objects.from_username_or_alias(store_for_username)
-        except (IndexError, ValueError):
+        if (user := User.objects.from_username_or_alias(
+                store_for_username)) is None:
             pyttman.logger.log(f"No db User matched: {store_for_username}")
             return Reply(self.storage["default_replies"]["no_users_matches"])
 
