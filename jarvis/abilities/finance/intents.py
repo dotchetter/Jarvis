@@ -261,6 +261,9 @@ class GetDebts(Intent):
         borrower: User = User.objects.from_username_or_alias(borrower_name)
         debt_sum = Debt.objects.filter(borrower=borrower).sum("amount")
 
+        if borrower is None:
+            return Reply("Hm, jag hittade inte personen som frågan gällde?")
+
         if debt_sum == 0:
             return Reply(
                 f"{borrower.username.capitalize()} "
