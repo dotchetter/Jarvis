@@ -109,8 +109,9 @@ class SharedExpensesApp:
 
             large_bucket_debt = largest_debt_bucket.outstanding_debt
             small_bucket_debt = smallest_debt_bucket.outstanding_debt
+
             debt_after_equalizing = large_bucket_debt - small_bucket_debt
             debt_after_equalizing = max(0, debt_after_equalizing)
-            comparison_bucket.compensation_amount -= debt_after_equalizing
+            comparison_bucket.compensation_amount = debt_after_equalizing
 
         return comparison_bucket
