@@ -194,17 +194,15 @@ class CalculateSplitExpenses(Intent):
 
             reply_stream.put(msg)
 
-            if message.entities["deduct_debts"] is True:
-                bucket_after_debts = SharedExpensesApp.calculate_debt_balance(
+            if message.entities["deduct_debts"]:
+                SharedExpensesApp.balance_out_debts_for_buckets(
                     top_paying_bucket=top_paying_bucket,
                     comparison_bucket=current_bucket)
 
                 msg = f"Med skulder inräknade blir " \
                       f"{bucket_username} skyldig {top_paying_username} " \
-                      f"**{bucket_after_debts.compensation_amount}:-** " \
-                      f"istället."
+                      f"**{current_bucket.compensation_amount}:-** istället."
                 reply_stream.put(msg)
-
         return reply_stream
 
 
