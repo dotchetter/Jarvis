@@ -67,13 +67,13 @@ class SharedExpensesApp:
         return processed
 
     @classmethod
-    def calculate_debt_balance(cls,
-                               top_paying_bucket: SharedExpenseBucket,
-                               comparison_bucket: SharedExpenseBucket):
+    def balance_out_debts_for_buckets(cls,
+                                      top_paying_bucket: SharedExpenseBucket,
+                                      comparison_bucket: SharedExpenseBucket):
         """
         Get the compensation_amount balance between two users and see who's
         to compensate whom
-        :return:
+        :return: int
         """
         # Find out if the top-paying user owes this user anything.
         top_paying_bucket.outstanding_debt = Debt.objects.filter(
@@ -109,9 +109,6 @@ class SharedExpensesApp:
 
             large_bucket_debt = largest_debt_bucket.outstanding_debt
             small_bucket_debt = smallest_debt_bucket.outstanding_debt
-
-            debt_after_equalizing = large_bucket_debt - small_bucket_debt
-            debt_after_equalizing = max(0, debt_after_equalizing)
-            comparison_bucket.compensation_amount = debt_after_equalizing
-
-        return comparison_bucket
+            deducted_debt = max(0, large_bucket_debt - small_bucket_debt)
+            largest_debt_bucket.compensation_amount += deducted_debt
+            return largest_debt_bucket
