@@ -37,13 +37,15 @@ class SharedExpensesApp:
         return res.scalar(scalar).all()
 
     @classmethod
-    def calculate_split(cls):
+    def calculate_split(cls, month_for_query: str | None = None):
         enrolled = cls.get_enrolled_users()
         expense_buckets, processed = [], []
         total_sum = 0
 
         for user in enrolled:
-            expenses = Expense.get_expenses_for_period_and_user(user=user)
+            expenses = Expense.get_expenses_for_period_and_user(
+                user=user,
+                month_for_query=month_for_query)
             amount = expenses.sum("price")
             bucket = cls.SharedExpenseBucket(user, amount, 0, 0)
             expense_buckets.append(bucket)
