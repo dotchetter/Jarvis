@@ -67,15 +67,14 @@ class Expense(me.Document):
                                 of query
         :return: QuerySet[Expense]
         """
-        query_month = Expense.get_month_calendar_int_from_name(month_for_query)
+        query_month = Month.get_month_calendar_int_from_name(month_for_query)
         start_date, end_date = Expense.get_date_range_for_query(query_month)
         return Expense.objects.filter(account_for__gte=start_date.month,
                                       account_for__lte=end_date.month)
 
     @staticmethod
     def get_expenses_for_period_and_user(user: User,
-                                         month_for_query: str = None
-                                         ) -> me.QuerySet:
+                                         month_for_query: str | None) -> me.QuerySet:
         """
         Returns Expense instances for given user
         recorded in the given month.
@@ -86,25 +85,11 @@ class Expense(me.Document):
                                 of query
         :return: QuerySet[Expense]
         """
-        query_month = Expense.get_month_calendar_int_from_name(month_for_query)
+        query_month = Month.get_month_calendar_int_from_name(month_for_query)
         start_date, end_date = Expense.get_date_range_for_query(query_month)
         return Expense.objects.filter(user_reference=user,
                                       account_for__gte=start_date,
                                       account_for__lte=end_date)
-
-    @staticmethod
-    def get_month_calendar_int_from_name(month_for_query) -> int:
-        """
-        Returns the calendar int of a month from
-        string, if possible - else, current month.
-        :param month_for_query:
-        :return: int
-        """
-        try:
-            query_month = Month[month_for_query].value
-        except KeyError:
-            query_month = datetime.now().month
-        return query_month
 
     @staticmethod
     def get_date_range_for_query(query_month: int,
