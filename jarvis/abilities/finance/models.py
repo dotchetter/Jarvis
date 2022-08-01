@@ -174,3 +174,19 @@ class Debt(me.Document):
         amount = f":money_with_wings: **{self.amount}:-**\n"
 
         return lender + amount + sep
+
+
+class AccountingEntry(me.Document):
+    """
+    This model represents an accounting performed by
+    a user.
+
+    Accounting records hold the state of balances between
+    shared expenses and debts among users.
+    Whenever a report is created by the user, the data
+    is returned and then stored in this document for
+    later retrieval.
+    """
+    participants: list[User] = me.ListField(me.ReferenceField(User, required=True))
+    top_paying_user: User = me.ReferenceField(User, required=False)
+    accounting_result: str = me.StringField(required=True)
