@@ -3,6 +3,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Sequence
 
 from mongoengine import Q, QuerySet
+from pyttman import app
 from pyttman.core.ability import Ability
 
 from jarvis.abilities.timekeeper.intents import (
@@ -20,6 +21,9 @@ class TimeKeeper(Ability):
                StopStopWatch,
                GetWorkshift,
                CreateWorkshiftsFromString)
+
+    def before_create(self):
+        pass #WorkShift.time_zone = app.settings.TIME_ZONE
 
     @staticmethod
     def get_total_billable_hours(*workshifts: Sequence[WorkShift]) -> Decimal:

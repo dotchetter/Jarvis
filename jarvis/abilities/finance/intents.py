@@ -6,11 +6,11 @@ import pyttman
 from mongoengine import QuerySet, Q
 from pyttman.core.containers import Message, Reply, ReplyStream
 from pyttman.core.entity_parsing.fields import TextEntityField, \
-    BoolEntityField, IntEntityField
+    BoolEntityField, IntEntityField, StringEntityField
 from pyttman.core.intent import Intent
 
 from jarvis.abilities.finance.helpers import SharedExpensesApp
-from jarvis.abilities.finance.models import Expense, Debt
+from jarvis.abilities.finance.models import Expense, Debt, AccountingEntry
 from jarvis.abilities.finance.month import Month
 from jarvis.models import User
 from jarvis.utils import extract_username
@@ -97,7 +97,7 @@ class GetExpenses(Intent):
                                                      "summed", "totalt",
                                                      "totala", "total"))
     show_most_recent_expense = BoolEntityField(message_contains=("senaste",))
-    month = TextEntityField(valid_strings=tuple(i.name for i in Month))
+    month = TextEntityField(valid_strings=Month.names_as_list)
     username_for_query = TextEntityField(
         valid_strings=SharedExpensesApp.enrolled_usernames
     )
@@ -166,13 +166,17 @@ class CalculateSplitExpenses(Intent):
                   "dessa ska kompenseras med för att alla " \
                   "ska ha betalat lika mycket."
 
-    deduct_debts = BoolEntityField(message_contains=("skuld", "lån"))
+    month = StringEntityField(valid_strings=Month.names_as_list)
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
+
         reply_stream = ReplyStream()
-        buckets = SharedExpensesApp.calculate_split()
+        buckets = SharedExpensesApp.calculate_split(message.entities["month"])
         top_paying_bucket: SharedExpensesApp.SharedExpenseBucket = buckets.pop()
         top_paying_username = top_paying_bucket.user.username.capitalize()
+
+        accounting_entry = AccountingEntry(top_paying_user=top_paying_bucket.user)
+        accounting_entry.participants.append(top_paying_bucket.user)
 
         reply_stream.put(f"{top_paying_username} har betalat "
                          f"**{top_paying_bucket.paid_amount}:-** denna månad.")
@@ -180,6 +184,8 @@ class CalculateSplitExpenses(Intent):
         while buckets:
             current_bucket = buckets.pop()
             bucket_username = current_bucket.user.username.capitalize()
+            compensation_without_debts = current_bucket.compensation_amount
+            accounting_entry.participants.append(current_bucket.user)
 
             if current_bucket.paid_amount == top_paying_bucket.paid_amount:
                 msg = f"{bucket_username} har betalat lika mycket " \
@@ -193,16 +199,26 @@ class CalculateSplitExpenses(Intent):
                       f"**{current_bucket.compensation_amount}:-**."
 
             reply_stream.put(msg)
+            SharedExpensesApp.balance_out_debts_for_buckets(
+                top_paying_bucket=top_paying_bucket,
+                comparison_bucket=current_bucket)
 
-            if message.entities["deduct_debts"]:
-                SharedExpensesApp.balance_out_debts_for_buckets(
-                    top_paying_bucket=top_paying_bucket,
-                    comparison_bucket=current_bucket)
+            if current_bucket.compensation_amount > compensation_without_debts:
+                # There are debts to account for; sum them up and include
+                # them in the message.
+                debt_sum = Debt.objects.filter(
+                    borrower=current_bucket.user,
+                    lender=top_paying_bucket.user
+                ).sum("amount")
 
-                msg = f"Med skulder inräknade blir " \
+                msg = f"{bucket_username} är skyldig {top_paying_username} " \
+                      f"{debt_sum}:-. Med denna skuld inräknad blir " \
                       f"{bucket_username} skyldig {top_paying_username} " \
                       f"**{current_bucket.compensation_amount}:-** istället."
                 reply_stream.put(msg)
+
+            accounting_entry.accounting_result = msg
+            accounting_entry.save()
         return reply_stream
 
 
@@ -258,6 +274,9 @@ class GetDebts(Intent):
         borrower_name = extract_username(message, "borrower_name")
         borrower: User = User.objects.from_username_or_alias(borrower_name)
         debt_sum = Debt.objects.filter(borrower=borrower).sum("amount")
+
+        if borrower is None:
+            return Reply("Hm, jag hittade inte personen som frågan gällde?")
 
         if debt_sum == 0:
             return Reply(
