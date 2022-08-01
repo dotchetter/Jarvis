@@ -6,11 +6,11 @@ import pyttman
 from mongoengine import QuerySet, Q
 from pyttman.core.containers import Message, Reply, ReplyStream
 from pyttman.core.entity_parsing.fields import TextEntityField, \
-    BoolEntityField, IntEntityField
+    BoolEntityField, IntEntityField, StringEntityField
 from pyttman.core.intent import Intent
 
 from jarvis.abilities.finance.helpers import SharedExpensesApp
-from jarvis.abilities.finance.models import Expense, Debt
+from jarvis.abilities.finance.models import Expense, Debt, AccountingEntry
 from jarvis.abilities.finance.month import Month
 from jarvis.models import User
 from jarvis.utils import extract_username
@@ -97,7 +97,7 @@ class GetExpenses(Intent):
                                                      "summed", "totalt",
                                                      "totala", "total"))
     show_most_recent_expense = BoolEntityField(message_contains=("senaste",))
-    month = TextEntityField(valid_strings=tuple(i.name for i in Month))
+    month = TextEntityField(valid_strings=Month.names_as_list)
     username_for_query = TextEntityField(
         valid_strings=SharedExpensesApp.enrolled_usernames
     )
@@ -166,7 +166,7 @@ class CalculateSplitExpenses(Intent):
                   "dessa ska kompenseras med för att alla " \
                   "ska ha betalat lika mycket."
 
-    deduct_debts = BoolEntityField(message_contains=("skuld", "lån"))
+    month = StringEntityField(valid_strings=Month.names_as_list)
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
 
@@ -199,13 +199,6 @@ class CalculateSplitExpenses(Intent):
                       f"**{current_bucket.compensation_amount}:-**."
 
             reply_stream.put(msg)
-
-            if message.entities["deduct_debts"]:
-                SharedExpensesApp.balance_out_debts_for_buckets(
-                    top_paying_bucket=top_paying_bucket,
-                    comparison_bucket=current_bucket)
-
-                msg = f"Med skulder inräknade blir " \
             SharedExpensesApp.balance_out_debts_for_buckets(
                 top_paying_bucket=top_paying_bucket,
                 comparison_bucket=current_bucket)
