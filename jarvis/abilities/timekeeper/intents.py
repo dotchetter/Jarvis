@@ -142,7 +142,11 @@ class CreateWorkshiftsFromString(Intent):
                                              is_active=False,
                                              is_consumed=True,
                                              beginning=beginning,
-                                             end=end)
+                                             end=end,
+                                             year=beginning.year,
+                                             day=beginning.day,
+                                             month=beginning.month,
+                                             manually_created=True)
         return Reply("OK! Jag har sparat ett arbetspass från "
                      f"{workshift.beginning} till "
                      f"{workshift.end} :slight_smile:")
