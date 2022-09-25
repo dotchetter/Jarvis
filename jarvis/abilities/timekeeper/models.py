@@ -21,6 +21,7 @@ class WorkShift(me.Document):
     month = me.IntField(default=lambda: datetime.now().month)
     year = me.IntField(default=lambda: datetime.now().year)
     day = me.IntField(default=lambda: datetime.now().day)
+    manually_created = me.BooleanField(default=False)
 
     @property
     def duration(self) -> time:
