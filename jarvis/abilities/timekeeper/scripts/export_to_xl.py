@@ -4,8 +4,8 @@ import xlsxwriter
 from jarvis.abilities.timekeeper.ability import TimeKeeper
 from jarvis.abilities.timekeeper.models import WorkShift
 
-year = 2022
-month = 4
+year = int(input("Which year do you want to export? "))
+month = int(input("Which month do you want to export? "))
 timekeeper_ability = TimeKeeper()
 
 workbook = xlsxwriter.Workbook(f"{year}_{month}.xlsx")
