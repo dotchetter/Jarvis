@@ -7,6 +7,7 @@ from mongoengine import QuerySet, Q
 from pyttman.core.containers import Message, Reply, ReplyStream
 from pyttman.core.entity_parsing.fields import TextEntityField, \
     BoolEntityField, IntEntityField, StringEntityField
+from pyttman.core.entity_parsing.identifiers import CapitalizedIdentifier
 from pyttman.core.intent import Intent
 
 from jarvis.abilities.finance.helpers import SharedExpensesApp
@@ -224,36 +225,27 @@ class CalculateSplitExpenses(Intent):
 
 class AddDebt(Intent):
     """
-    Adds a Debt for a user. Who is borrower and lender is
-    determined by the message contents.
-    """
-    example = "Jag har lånat 100 av Katrin"
-    lead = ("lånat", "lånade", "borrowed", "borrow", "compensation_amount", "skyldig")
+    Register a debt.
+    The debt can either be described as you borrowing from another
+    person, or that other person borrowing from you.
 
+    'I've borrowed 200:- from John'   <- You're the borrower
+    'John has borrowed 200'           <- You're the lender
+    """
+    help_string = __doc__
+    example = "Jag har lånat 100 kronor av Katrin"
+    lead = ("lånat", "låna", "lånade", "borrowed", "borrow")
+
+    author_is_borrower = BoolEntityField(message_contains=("jag", "i"))
+    author_is_lender = BoolEntityField(message_contains=("ut", "mig", "me"))
+    other_person = TextEntityField(valid_strings=SharedExpensesApp
+                                   .enrolled_usernames)
     amount = IntEntityField()
-    lender = TextEntityField(valid_strings=SharedExpensesApp.enrolled_usernames)
 
     def respond(self, message: Message) -> Reply | ReplyStream:
-        lender_name = extract_username(message, "lender")
-
-        if (borrower := User.objects.from_message(message)) is None:
-            return Reply(self.storage["default_replies"]["no_users_matches"])
-
-        if (amount := message.entities.get("amount")) is None:
+        if message.entities["amount"] is None:
             return Reply("Du måste ange belopp på skulden")
-
-        try:
-            lender: User = User.objects.from_username_or_alias(lender_name)
-        except (IndexError, ValueError):
-            pyttman.logger.log(f"Lender not found for entity "
-                               f"provided: '{lender_name}'")
-            return Reply(self.storage["default_replies"]["no_users_matches"])
-
-        Debt.objects.create(borrower=borrower, lender=lender, amount=amount)
-        return Reply(f"Okej, jag har antecknat att "
-                     f"{borrower.username.capitalize()} "
-                     f"har lånat {amount}:- av "
-                     f"{lender.username.capitalize()}.")
+        return Reply(self.ability.register_debt(message))
 
 
 class GetDebts(Intent):
