@@ -213,6 +213,72 @@ class FinanceAbility(Ability):
             reply_stream.put(debt)
 
         return reply_stream
+
+    def repay_debt(self, message: Message):
+        """
+        One user pays back another user, an amount of money.
+        """
+        remaining_repaid_amount = repaid_amount = message.entities.get(
+            "repaid_amount")
+        author_is_borrower = message.entities.get("author_is_borrower")
+        mentioned_user = message.entities.get("mentioned_user")
+        author_user = User.objects.from_message(message)
+
+        try:
+            mentioned_user = User.objects.from_username_or_alias(mentioned_user)
+        except (IndexError, ValueError):
+            pyttman.logger.log(f"User not found for entity "
+                               f"provided: '{mentioned_user}'")
+            return Reply(self.storage["default_replies"]["no_users_matches"])
+
+        if author_is_borrower:
+            lender = mentioned_user
+            borrower = author_user
+        else:
+            lender = author_user
+            borrower = mentioned_user
+
+        borrower_capitalized = borrower.username.capitalize()
+        lender_capitalized = lender.username.capitalize()
+
+        # Get debts common to this borrower and lender
+        # Order the debts by amount, desc
+        debts: Collection[Debt] = Debt.objects.filter(
+            borrower=borrower,
+            lender=lender
+        ).order_by(
+            "amount")
+
+        for debt in debts:
+            if remaining_repaid_amount <= 0:
+                break
+            debt_amount_before_reduce = debt.amount
+            debt.amount -= remaining_repaid_amount
+            remaining_repaid_amount -= debt_amount_before_reduce
+            debt.delete() if debt.amount <= 0 else debt.save()
+
+        # Looks like the user overpaid.
+        # Create a new compensation_amount going the other way.
+        if remaining_repaid_amount > 0:
+            Debt.objects.create(amount=remaining_repaid_amount,
+                                lender=borrower,
+                                borrower=lender)
+            reply = Reply(
+                f"{borrower_capitalized} har överbetalat "
+                f"dig med **{remaining_repaid_amount}:-**. En skuld "
+                f"har skapats {borrower_capitalized} har lånat ut *"
+                f"*{remaining_repaid_amount}**:- till "
+                f"{lender_capitalized}.")
+        else:
+            total_debt_balance = Debt.objects.filter(
+                borrower=borrower, lender=lender
+            ).sum("amount")
+            reply = Reply(f"{borrower_capitalized} har "
+                          f"minskat sin skuld till {lender_capitalized} "
+                          f"med **{repaid_amount}**:-, och är nu skyldig "
+                          f"{total_debt_balance}:-")
+        return reply
+
     @staticmethod
     def calculate_split_expenses(message):
         """
