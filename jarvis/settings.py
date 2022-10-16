@@ -59,5 +59,6 @@ LOG_TO_STDOUT = True
 APP_NAME = "jarvis"
 APP_VERSION = "1.2.9"
 DATETIME_FORMAT = "%Y-%m-%d-%H:%M"
+TIMESTAMP_FORMAT = "%H:%M"
 
 TIME_ZONE = datetime.utcnow().astimezone().tzinfo
