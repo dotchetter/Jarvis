@@ -2,9 +2,11 @@ from datetime import datetime, date
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Sequence
 
+import pyttman
 from mongoengine import Q, QuerySet
 from pyttman import app
 from pyttman.core.ability import Ability
+from pyttman.core.containers import Message, Reply
 
 from jarvis.abilities.timekeeper.intents import (
     StartStopWatch,
@@ -90,3 +92,61 @@ class TimeKeeper(Ability):
         return WorkShift.objects.filter(
             Q(user=user) & Q(is_active=True)
         ).first()
+
+    @staticmethod
+    def save_workshift_from_string(message: Message):
+        current_user = User.objects.from_message(message)
+
+        # If from->to was entered as datetime, e.g. the shift didn't occur today
+        from_datetime = message.entities["from_datetime"]
+        to_datetime = message.entities["to_datetime"]
+
+        # If from->to was entered as timestamps
+        from_timestamp = message.entities["from_timestamp"]
+        to_timestamp = message.entities["to_timestamp"]
+
+        if not ((from_datetime and to_datetime) or (from_timestamp and to_timestamp)):
+            return Reply("Ange när arbetspasset började och slutade. "
+                         "Om båda dessa infaller idag, räcker det med "
+                         "klockslag, t.ex. `08:30 till 12:00`.")
+
+        if from_datetime and to_datetime:
+            dt_format = app.settings.DATETIME_FORMAT
+            start_datetime = datetime.strptime(from_datetime, dt_format)
+            end_datetime = datetime.strptime(to_datetime, dt_format)
+        else:
+            dt_format = app.settings.TIMESTAMP_FORMAT
+            start_datetime = end_datetime = datetime.now()
+            timestamp_start = datetime.strptime(from_timestamp, dt_format)
+            timestamp_end = datetime.strptime(to_timestamp, dt_format)
+
+            start_datetime = start_datetime.replace(hour=timestamp_start.hour,
+                                                    minute=timestamp_start.minute)
+            end_datetime = end_datetime.replace(hour=timestamp_end.hour,
+                                                minute=timestamp_end.minute)
+
+        try:
+            if start_datetime > end_datetime:
+                return Reply("Felaktigt inmatade värden: Passet kan inte "
+                             "sluta innan det börjat. Det blir ju lite "
+                             "konstigt?")
+        except Exception as e:
+            pyttman.logger.log(str(e), "error")
+            return Reply("Jag kunde inte förstå när "
+                         "passet började och slutade..")
+
+        WorkShift.objects.create(user=current_user,
+                                 is_active=False,
+                                 is_consumed=True,
+                                 beginning=start_datetime,
+                                 end=end_datetime,
+                                 year=start_datetime.year,
+                                 day=start_datetime.day,
+                                 month=start_datetime.month,
+                                 manually_created=True)
+
+        output_start = start_datetime.strftime(app.settings.DATETIME_FORMAT)
+        output_end = end_datetime.strftime(app.settings.DATETIME_FORMAT)
+
+        return Reply("OK! Jag har sparat ett arbetspass från "
+                     f"{output_start} till {output_end} :slight_smile:")
