@@ -11,6 +11,7 @@ from pyttman.core.entity_parsing.identifiers import DateTimeStringIdentifier
 from pyttman.core.intent import Intent
 
 from jarvis.abilities.timekeeper.models import WorkShift
+from jarvis.custom_identifiers import TimeStampIdentifier
 from jarvis.models import User
 
 
@@ -116,37 +117,14 @@ class GetWorkshift(Intent):
 
 class CreateWorkshiftsFromString(Intent):
 
-    lead = ("lägg", "spara", "skapa")
+    lead = ("lägg", "spara", "skapa", "nytt")
     trail = ("pass", "arbetspass", "skift", "timmar")
 
     from_datetime = StringEntityField(identifier=DateTimeStringIdentifier)
     to_datetime = StringEntityField(identifier=DateTimeStringIdentifier)
 
+    from_timestamp = StringEntityField(identifier=TimeStampIdentifier)
+    to_timestamp = StringEntityField(identifier=TimeStampIdentifier)
+
     def respond(self, message: Message) -> Reply | ReplyStream:
-        datetime_format = "%Y-%m-%d-%H:%M"# app.settings.DATETIME_FORMAT
-        current_user = User.objects.from_message(message)
-        from_datetime = message.entities["from_datetime"]
-        to_datetime = message.entities["to_datetime"]
-        if not from_datetime and to_datetime:
-            return Reply("Ange när arbetspasset började och slutade. "
-                         "Format: YYYY-MM-DD-hh-mm")
-
-        try:
-            beginning = datetime.strptime(from_datetime, datetime_format)
-            end = datetime.strptime(to_datetime, datetime_format)
-        except Exception as e:
-            pyttman.logger.log(str(e), "error")
-            return Reply("Jag kunde inte förstå datumen tyvärr :(")
-
-        workshift = WorkShift.objects.create(user=current_user,
-                                             is_active=False,
-                                             is_consumed=True,
-                                             beginning=beginning,
-                                             end=end,
-                                             year=beginning.year,
-                                             day=beginning.day,
-                                             month=beginning.month,
-                                             manually_created=True)
-        return Reply("OK! Jag har sparat ett arbetspass från "
-                     f"{workshift.beginning} till "
-                     f"{workshift.end} :slight_smile:")
+        return self.ability.save_workshift_from_string(message)
