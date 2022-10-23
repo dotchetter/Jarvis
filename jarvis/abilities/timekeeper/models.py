@@ -43,6 +43,7 @@ class WorkShift(me.Document):
     end = me.DateTimeField(default=None, null=True)
     is_active = me.BooleanField(default=True)
     is_consumed = me.BooleanField(default=False)
+    created_at = me.DateTimeField(default=lambda: datetime.now())
     month = me.IntField(default=lambda: datetime.now().month)
     year = me.IntField(default=lambda: datetime.now().year)
     day = me.IntField(default=lambda: datetime.now().day)
