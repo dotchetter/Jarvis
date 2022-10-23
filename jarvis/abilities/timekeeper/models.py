@@ -3,7 +3,33 @@ from datetime import time
 
 import mongoengine as me
 
+from jarvis.abilities.timekeeper.querysets import ProjectQuerySet, WorkShiftQuerySet
 from jarvis.models import User
+
+
+class Project(me.Document):
+    """
+    The Project model represents projects which workshifts
+    relate to.
+    """
+    meta = {"queryset_class": ProjectQuerySet}
+    name = me.StringField()
+    is_active = me.BooleanField(default=False)
+    is_default = me.BooleanField(default=False)
+    created = me.DateTimeField(default=datetime.utcnow)
+
+    def __str__(self):
+        return self.name.capitalize()
+
+    @classmethod
+    def all_project_names(cls) -> tuple[str]:
+        """
+        Get the raw property 'name' of all projects, as well
+        as how they're presented in the application by __str__.
+        """
+        names = list(cls.objects.all().scalar("name"))
+        presentable_names = [str(i) for i in cls.objects.all()]
+        return tuple(names + presentable_names)
 
 
 class WorkShift(me.Document):
@@ -11,7 +37,7 @@ class WorkShift(me.Document):
     the WorkShift model holds a period in time for a user.
     StopWatch instances have a beginning and an end.
     """
-
+    meta = {"queryset_class": WorkShiftQuerySet}
     user = me.ReferenceField(User, required=True)
     beginning = me.DateTimeField(default=None, null=True)
     end = me.DateTimeField(default=None, null=True)
@@ -22,6 +48,7 @@ class WorkShift(me.Document):
     year = me.IntField(default=lambda: datetime.now().year)
     day = me.IntField(default=lambda: datetime.now().day)
     manually_created = me.BooleanField(default=False)
+    project = me.ReferenceField(Project, required=False)
 
     @property
     def duration(self) -> time:
