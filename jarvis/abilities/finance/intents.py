@@ -1,18 +1,12 @@
-from datetime import datetime
 from typing import Union
 
-import pandas
-import pyttman
 from pyttman.core.containers import Message, Reply, ReplyStream
 from pyttman.core.entity_parsing.fields import TextEntityField, \
     BoolEntityField, IntEntityField, StringEntityField
 from pyttman.core.intent import Intent
 
 from jarvis.abilities.finance.helpers import SharedExpensesApp
-from jarvis.abilities.finance.models import Expense
 from jarvis.abilities.finance.month import Month
-from jarvis.models import User
-from jarvis.utils import extract_username
 
 
 class AddExpense(Intent):
@@ -26,9 +20,8 @@ class AddExpense(Intent):
     store_for_next_month = BoolEntityField(message_contains=("nästa",
                                                              "månad"))
     expense_value = IntEntityField()
-    store_for_username = TextEntityField(
-        valid_strings=SharedExpensesApp.enrolled_usernames
-    )
+    store_for_username = TextEntityField(valid_strings=SharedExpensesApp
+                                         .enrolled_usernames)
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
         return self.ability.add_expense(message)
