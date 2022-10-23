@@ -21,7 +21,12 @@ MIDDLEWARE = {
     "ROUTER_CLASS": "pyttman.core.middleware.routing.FirstMatchingRouter",
 
     "COMMAND_UNKNOWN_RESPONSES": [
-        "Ursäkta, jag förstår inte?",
+        "Hmm, nu är jag inte med...",
+        "Jag fattar inte. :(",
+        "...?",
+        "Nä, jag förstår inte vad du menar.",
+        "Hmmm.. prova igen, jag hänger inte med?",
+        "Blipp, blopp... jag hajar inte vad du menar.",
     ],
     "HELP_KEYWORD": "hjälp",
 
