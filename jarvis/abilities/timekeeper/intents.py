@@ -1,6 +1,6 @@
 from pyttman.core.containers import ReplyStream, Reply, Message
 from pyttman.core.entity_parsing.fields import BoolEntityField, \
-    StringEntityField
+    StringEntityField, IntEntityField
 from pyttman.core.entity_parsing.identifiers import DateTimeStringIdentifier
 from pyttman.core.intent import Intent
 
@@ -65,7 +65,7 @@ class GetWorkshift(Intent):
     Get information about a currently running work shift.
     """
     lead = ("visa", "hämta", "hur",)
-    trail = ("pass", "arbetspass", "skift", "timmar", "jobbat")
+    trail = ("pass", "arbetspass", "skift", "timmar", "jobbat", "tjänat")
 
     sum_for_today = BoolEntityField(message_contains=("idag", "idag?"))
     sum_for_month = BoolEntityField(message_contains=("månad", "månaden",
@@ -99,6 +99,7 @@ class CreateNewProject(Intent):
     Create a new Project, to store workshifts for
     """
     project_name = StringEntityField(span=5)
+    hourly_rate = IntEntityField()
     lead = ("skapa", "nytt")
     trail = ("projekt",)
 

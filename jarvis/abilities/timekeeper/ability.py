@@ -114,9 +114,12 @@ class TimeKeeper(Ability):
         """
         if (project_name := message.entities["project_name"]) is None:
             return Reply("Du måste ange ett projektnamn.")
+        if (hourly_rate := message.entities["hourly_rate"]) is None:
+            return Reply("Du måste ange ett timarvode för projektet.")
         if Project.objects(name=project_name.casefold()).first():
             return Reply("Det finns redan ett projekt med det namnet.")
-        project = Project.objects.create(name=project_name.casefold())
+        project = Project.objects.create(name=project_name.casefold(),
+                                         hourly_rate=hourly_rate)
         return Reply(f"Grattis till ditt nya projekt: '{project}'!")
 
     @classmethod
@@ -141,6 +144,8 @@ class TimeKeeper(Ability):
         based on whether to sum for today or for the current month.
         """
         project_name = message.entities["project_name"]
+        temporal_unit_for_reply = "idag"
+        hours = 0
 
         if (project := Project.objects.get_by_name_or_default_project(
                 project_name)) is None:
@@ -149,7 +154,8 @@ class TimeKeeper(Ability):
                          "Du kan välja mellan "
                          f"{', '.join(Project.all_project_names())}.")
 
-        base_reply_string = "Totalt har du jobbat in {} timmar {} i projekt {}"
+        base_reply_string = "Totalt har du jobbat in {} timmar " \
+                            "{} i projekt {} till ett värde av {:.1f}:-"
         current_user = User.objects.from_message(message)
         sum_for_today = message.entities["sum_for_today"]
         sum_for_month = message.entities["sum_for_month"]
@@ -170,15 +176,18 @@ class TimeKeeper(Ability):
                 user=current_user,
                 project=project)
             hours = self.get_total_billable_hours(*shifts)
-            base_reply_string = base_reply_string.format(hours, "idag",
-                                                         project)
         elif message.entities["sum_for_month"]:
             shifts = WorkShift.objects.get_all_for_user_in_current_month(
                 user=current_user,
                 project=project)
             hours = self.get_total_billable_hours(*shifts)
-            base_reply_string = base_reply_string.format(hours, "denna månad",
-                                                         project)
+            temporal_unit_for_reply = "denna månad"
+
+        workshift_sum = hours * project.hourly_rate
+        base_reply_string = base_reply_string.format(hours,
+                                                     temporal_unit_for_reply,
+                                                     project,
+                                                     workshift_sum)
         return Reply(base_reply_string)
 
     @classmethod

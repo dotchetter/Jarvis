@@ -17,6 +17,7 @@ class Project(me.Document):
     is_active = me.BooleanField(default=False)
     is_default = me.BooleanField(default=False)
     created = me.DateTimeField(default=datetime.utcnow)
+    hourly_rate = me.DecimalField(required=True)
 
     def __str__(self):
         return self.name.capitalize()
