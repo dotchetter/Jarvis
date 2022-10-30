@@ -175,3 +175,4 @@ class AccountingEntry(me.Document):
     participants: list[User] = me.ListField(me.ReferenceField(User, required=True))
     top_paying_user: User = me.ReferenceField(User, required=False)
     accounting_result: str = me.StringField(required=True)
+    created = me.DateField(default=datetime.now())
