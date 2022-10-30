@@ -1,8 +1,10 @@
 from datetime import datetime
 from typing import Collection
 
+import dateutil
 import pandas
 import pyttman
+from dateutil.relativedelta import relativedelta
 from mongoengine import QuerySet, Q
 from pyttman.core.ability import Ability
 from pyttman.core.containers import Message, ReplyStream, Reply
@@ -61,30 +63,45 @@ class FinanceAbility(Ability):
         """
         Add a shared expense.
         """
+        stream = ReplyStream()
+        now = account_for_date = datetime.now()
         expense_name = message.entities.get("expense_name")
         expense_value = message.entities.get("expense_value")
         for_next_month = message.entities.get("store_for_next_month")
         store_for_username = extract_username(message, "store_for_username")
-        account_for_date = datetime.now()
+        current_month_start = now - relativedelta(day=1, hour=0, minute=0)
+        current_month_end = now + relativedelta(day=31, hour=23, minute=59)
+        accounting_entry_for_month = AccountingEntry.objects.filter(
+            created__gte=current_month_start,
+            created__lte=current_month_end)
 
         if None in (expense_value, expense_name):
             return Reply("Du måste ange både namn och "
                          "pris på vad du har köpt.")
 
-        if for_next_month:
+        if for_next_month or accounting_entry_for_month:
             account_for_date += pandas.DateOffset(months=1)
+            account_for_date = account_for_date.replace(day=1)
 
         if (user := User.objects.from_username_or_alias(
                 store_for_username)) is None:
             pyttman.logger.log(f"No db User matched: {store_for_username}")
             return Reply(self.storage["default_replies"]["no_users_matches"])
 
+        username = user.username.capitalize()
         Expense.objects.create(price=expense_value,
                                expense_name=expense_name,
                                user_reference=user,
                                account_for=account_for_date)
 
-        return Reply(f"Utlägget sparades för {user.username.capitalize()}")
+        stream.put(f"Utgiften sparades för {user.username.capitalize()}. ")
+
+        if for_next_month:
+            stream.put("Utlägget har sparats för nästa månad.")
+        elif accounting_entry_for_month:
+            stream.put("Eftersom denna månad har konterats redan, har "
+                       "utlägget sparats för nästa månad automatiskt.")
+        return stream
 
     def get_expenses(self, message: Message):
         """
