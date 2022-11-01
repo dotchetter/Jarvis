@@ -154,8 +154,7 @@ class TimeKeeper(Ability):
                          "Du kan välja mellan "
                          f"{', '.join(Project.all_project_names())}.")
 
-        base_reply_string = "Totalt har du jobbat in {} timmar " \
-                            "{} i projekt {} till ett värde av {:.1f}:-"
+        base_reply_string = "Totalt har du jobbat in {} timmar {} i projekt {}"
         current_user = User.objects.from_message(message)
         sum_for_today = message.entities["sum_for_today"]
         sum_for_month = message.entities["sum_for_month"]
@@ -183,12 +182,9 @@ class TimeKeeper(Ability):
             hours = self.get_total_billable_hours(*shifts)
             temporal_unit_for_reply = "denna månad"
 
-        workshift_sum = hours * project.hourly_rate
-        base_reply_string = base_reply_string.format(hours,
-                                                     temporal_unit_for_reply,
-                                                     project,
-                                                     workshift_sum)
-        return Reply(base_reply_string)
+        return Reply(base_reply_string.format(hours,
+                                              temporal_unit_for_reply,
+                                              project))
 
     @classmethod
     def set_project_as_default(cls, message: Message) -> Reply:

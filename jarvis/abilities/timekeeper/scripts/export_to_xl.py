@@ -2,10 +2,11 @@
 import xlsxwriter
 
 from jarvis.abilities.timekeeper.ability import TimeKeeper
-from jarvis.abilities.timekeeper.models import WorkShift
+from jarvis.abilities.timekeeper.models import WorkShift, Project
 
 year = int(input("Which year do you want to export? "))
 month = int(input("Which month do you want to export? "))
+project_name = input("Which project? ")
 timekeeper_ability = TimeKeeper()
 
 workbook = xlsxwriter.Workbook(f"{year}_{month}.xlsx")
@@ -14,7 +15,15 @@ current_day = None
 row = 0
 bold = workbook.add_format({'bold': True})
 workshifts_for_current_day = []
-work_shifts = WorkShift.objects.filter(month=month, year=year).all()
+project = Project.objects.try_get(name=project_name)
+
+if project is None:
+    print("Project not found:", project_name)
+    exit(-1)
+
+work_shifts = WorkShift.objects.filter(month=month,
+                                       year=year,
+                                       project=project).all()
 
 for work_shift in work_shifts:
     beginning_date = work_shift.beginning.date()
