@@ -79,6 +79,7 @@ class CalculateSplitExpenses(Intent):
                   "dessa ska kompenseras med för att alla " \
                   "ska ha betalat lika mycket."
 
+    close_current_period = BoolEntityField(message_contains=("stäng", "lås"))
     month = StringEntityField(valid_strings=Month.names_as_list)
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:

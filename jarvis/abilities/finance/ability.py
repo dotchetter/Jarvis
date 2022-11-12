@@ -352,5 +352,9 @@ class FinanceAbility(Ability):
                 reply_stream.put(msg)
 
             accounting_entry.accounting_result = msg
-            accounting_entry.save()
+            if message.entities["close_current_period"]:
+                accounting_entry.save()
+                reply_stream.put("Innevarande månad har stängts. Nya utgifter "
+                                 "som matas in under resten av denna månad "
+                                 "kommer bokföras för nästa månad automatiskt.")
         return reply_stream
