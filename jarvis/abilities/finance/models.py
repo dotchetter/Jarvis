@@ -146,7 +146,7 @@ class Debt(me.Document):
     borrower: User = me.ReferenceField(User, required=True)
     lender: User = me.ReferenceField(User, required=True)
     amount: float = me.FloatField(default=0.0)
-    created = me.DateTimeField(default=lambda: datetime.now())
+    created: datetime = me.DateTimeField(default=lambda: datetime.now())
 
     def __str__(self):
         """

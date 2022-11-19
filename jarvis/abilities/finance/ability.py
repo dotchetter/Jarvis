@@ -1,11 +1,10 @@
 from datetime import datetime
 from typing import Collection
 
-import dateutil
 import pandas
 import pyttman
 from dateutil.relativedelta import relativedelta
-from mongoengine import QuerySet, Q
+from mongoengine import QuerySet
 from pyttman.core.ability import Ability
 from pyttman.core.containers import Message, ReplyStream, Reply
 
@@ -16,8 +15,8 @@ from jarvis.abilities.finance.intents import (
     CalculateSplitExpenses,
     AddDebt,
     GetDebts,
-    RepayDebt
-)
+    RepayDebt,
+    UndoLastClosingCalculatedExpense,)
 from jarvis.abilities.finance.models import Debt, AccountingEntry, Expense
 from jarvis.abilities.finance.month import Month
 from jarvis.models import User
@@ -38,7 +37,8 @@ class FinanceAbility(Ability):
                CalculateSplitExpenses,
                AddDebt,
                GetDebts,
-               RepayDebt)
+               RepayDebt,
+               UndoLastClosingCalculatedExpense,)
 
     def before_create(self) -> None:
         """
@@ -358,3 +358,13 @@ class FinanceAbility(Ability):
                                  "som matas in under resten av denna månad "
                                  "kommer bokföras för nästa månad automatiskt.")
         return reply_stream
+
+    @classmethod
+    def delete_last_created_account_entry(cls) -> None:
+        """
+        Deletes the most-recent accounting entry object.
+        """
+        if last_entry := AccountingEntry.objects.order_by("-created").first():
+            last_entry.delete()
+            return last_entry
+        return None
