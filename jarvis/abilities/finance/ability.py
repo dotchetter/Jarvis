@@ -8,7 +8,6 @@ from mongoengine import QuerySet
 from pyttman.core.ability import Ability
 from pyttman.core.containers import Message, ReplyStream, Reply
 
-from jarvis.abilities.finance.helpers import SharedExpensesApp
 from jarvis.abilities.finance.intents import (
     AddExpense,
     GetExpenses,
@@ -17,7 +16,8 @@ from jarvis.abilities.finance.intents import (
     GetDebts,
     RepayDebt,
     UndoLastClosingCalculatedExpense,)
-from jarvis.abilities.finance.models import Debt, AccountingEntry, Expense
+from jarvis.abilities.finance.models import Debt, AccountingEntry, Expense, \
+    SharedExpensesApp
 from jarvis.abilities.finance.month import Month
 from jarvis.models import User
 from jarvis.utils import extract_username

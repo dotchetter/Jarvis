@@ -5,7 +5,7 @@ from pyttman.core.entity_parsing.fields import TextEntityField, \
     BoolEntityField, IntEntityField, StringEntityField
 from pyttman.core.intent import Intent
 
-from jarvis.abilities.finance.helpers import SharedExpensesApp
+from jarvis.abilities.finance.models import SharedExpensesApp
 from jarvis.abilities.finance.month import Month
 
 
