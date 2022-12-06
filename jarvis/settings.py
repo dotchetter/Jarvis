@@ -53,6 +53,12 @@ CLIENT = {
     "class": "pyttman.clients.community.discord.client.DiscordClient",
     "token": os.getenv("DISCORD_TOKEN_DEV") if DEV_MODE else os.getenv("DISCORD_TOKEN_PROD"),
     "guild": os.getenv("DISCORD_GUILD_DEV") if DEV_MODE else os.getenv("DISCORD_GUILD_PROD"),
+    "discord_intent_flags": {
+        "message_content": True,
+        "dm_messages": True,
+        "guild_messages": True,
+        "messages": True
+    }
 }
 
 APP_BASE_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
@@ -62,7 +68,7 @@ LOG_FILE_DIR = APP_BASE_DIR / Path("logs")
 LOG_TO_STDOUT = True
 
 APP_NAME = "jarvis"
-APP_VERSION = "1.5.3"
+APP_VERSION = "1.5.4"
 DATETIME_FORMAT = "%Y-%m-%d-%H:%M"
 TIMESTAMP_FORMAT = "%H:%M"
 

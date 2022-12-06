@@ -5,7 +5,7 @@ from pyttman.core.entity_parsing.fields import TextEntityField, \
     BoolEntityField, IntEntityField, StringEntityField
 from pyttman.core.intent import Intent
 
-from jarvis.abilities.finance.helpers import SharedExpensesApp
+from jarvis.abilities.finance.models import SharedExpensesApp
 from jarvis.abilities.finance.month import Month
 
 
@@ -142,3 +142,19 @@ class RepayDebt(Intent):
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         return self.ability.repay_debt(message)
+
+
+class UndoLastClosingCalculatedExpense(Intent):
+    """
+    This intent allows users to delete previously accounting records.
+    It will delete the most recent entry.
+    """
+    help_string = __doc__
+    lead = ("radera", "ta bort", "ångra")
+    trail = ("kontering", "konteringen")
+
+    def respond(self, message: Message) -> Reply | ReplyStream:
+        deleted_entry = self.ability.delete_last_created_account_entry()
+        if deleted_entry is None:
+            return Reply("Det fanns ingen kontering att radera.")
+        return Reply(f"Konteringen från {deleted_entry.created} har raderats.")
