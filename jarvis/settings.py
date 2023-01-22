@@ -11,9 +11,6 @@ DEV_MODE = False
 
 DB_NAME_PROD = os.getenv("MONGO_DB_NAME_PROD")
 DB_NAME_DEV = os.getenv("MONGO_DB_NAME_DEV")
-
-db_name = DB_NAME_DEV if DEV_MODE else DB_NAME_PROD
-
 APPEND_LOG_FILES = True
 
 MIDDLEWARE = {
@@ -42,7 +39,7 @@ ABILITIES = [
 
 DATABASE = {
     "tlsCAFile": certifi.where(),
-    "db": None,  # Configured in Ability 'Configure' hook
+    "db": None,  # Configured in app lifecycle hook 'before_start', app.py
     "host": os.getenv("MONGO_DB_URL"),
     "username": os.getenv("MONGO_DB_USER"),
     "password": os.getenv("MONGO_DB_PASSWORD"),
