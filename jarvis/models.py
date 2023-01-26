@@ -1,3 +1,5 @@
+import enum
+from decimal import Decimal
 import mongoengine as me
 from mongoengine import QuerySet
 from pyttman.core.containers import Message
@@ -7,6 +9,7 @@ class UserQuerySet(QuerySet):
     """
     Custom metaclass for User queries
     """
+
     def from_username(self, username: str):
         """
         Get a user by username
@@ -40,14 +43,31 @@ class UserQuerySet(QuerySet):
         return self.from_username_or_alias(sanitized_name)
 
 
-class AppEnrollment(me.Document):
+class Features(enum.Enum):
     """
-    Embedded document, representing app names provided
-    in Jarvis, allowing users to enroll and/or de-enroll from
-    certain optional functionality in Jarvis.
+    Available options for features
     """
-    shared_expenses = me.BooleanField(default=False)
-    work_shift = me.BooleanField(default=False)
+    shared_finances = 0
+    timekeeper = 1
+
+
+class UserProfile(me.Document):
+    """
+    Holds various personal attributes
+    """
+    _gross_income = me.DecimalField(default=None)
+    user = me.ReferenceField('User')
+
+    @property
+    def gross_income(self) -> Decimal:
+        return self._gross_income
+
+    @gross_income.setter
+    def gross_income(self, value: Decimal):
+        if isinstance(value, float):
+            self._gross_income = Decimal.from_float(value)
+        else:
+            self._gross_income = Decimal(value)
 
 
 class User(me.Document):
@@ -58,7 +78,9 @@ class User(me.Document):
     :field name:
         String, username of a user.
     """
-    username = me.StringField(required=True)
+    username = me.StringField(required=True, unique=True)
     aliases = me.ListField(me.DynamicField())
     meta = {"queryset_class": UserQuerySet}
-    enrolled_apps = me.ReferenceField(AppEnrollment)
+    profile = me.ReferenceField(UserProfile, null=True)
+    enrolled_features = me.ListField(me.EnumField(Features))
+
