@@ -8,6 +8,7 @@ from mongoengine import QuerySet
 from pyttman.core.ability import Ability
 from pyttman.core.containers import Message, ReplyStream, Reply
 
+from jarvis.abilities.finance.calculator import SharedFinancesCalculator
 from jarvis.abilities.finance.intents import (
     AddExpense,
     GetExpenses,
@@ -16,8 +17,7 @@ from jarvis.abilities.finance.intents import (
     GetDebts,
     RepayDebt,
     UndoLastClosingCalculatedExpense,)
-from jarvis.abilities.finance.models import Debt, AccountingEntry, Expense, \
-    SharedExpensesApp
+from jarvis.abilities.finance.models import Debt, AccountingEntry, Expense
 from jarvis.abilities.finance.month import Month
 from jarvis.models import User
 from jarvis.utils import extract_username
@@ -305,8 +305,8 @@ class FinanceAbility(Ability):
         :return:
         """
         reply_stream = ReplyStream()
-        buckets = SharedExpensesApp.calculate_split(message.entities["month"])
-        top_paying_bucket: SharedExpensesApp.SharedExpenseBucket = buckets.pop()
+        buckets = SharedFinancesCalculator.calculate_split(message.entities["month"])
+        top_paying_bucket: SharedFinancesCalculator.SharedExpenseCalculation = buckets.pop()
         top_paying_username = top_paying_bucket.user.username.capitalize()
 
         accounting_entry = AccountingEntry(top_paying_user=top_paying_bucket.user)
@@ -333,7 +333,7 @@ class FinanceAbility(Ability):
                       f"**{current_bucket.compensation_amount}:-**."
 
             reply_stream.put(msg)
-            SharedExpensesApp.balance_out_debts_for_buckets(
+            SharedFinancesCalculator.balance_out_debts_for_buckets(
                 top_paying_bucket=top_paying_bucket,
                 comparison_bucket=current_bucket)
 
