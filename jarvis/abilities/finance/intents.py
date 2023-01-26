@@ -5,7 +5,7 @@ from pyttman.core.entity_parsing.fields import TextEntityField, \
     BoolEntityField, IntEntityField, StringEntityField
 from pyttman.core.intent import Intent
 
-from jarvis.abilities.finance.models import SharedExpensesApp
+from jarvis.abilities.finance.calculator import SharedFinancesCalculator
 from jarvis.abilities.finance.month import Month
 
 
@@ -20,7 +20,7 @@ class AddExpense(Intent):
     store_for_next_month = BoolEntityField(message_contains=("nästa",
                                                              "månad"))
     expense_value = IntEntityField()
-    store_for_username = TextEntityField(valid_strings=SharedExpensesApp
+    store_for_username = TextEntityField(valid_strings=SharedFinancesCalculator
                                          .enrolled_usernames)
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
@@ -53,7 +53,7 @@ class GetExpenses(Intent):
     show_most_recent_expense = BoolEntityField(message_contains=("senaste",))
     month = TextEntityField(valid_strings=Month.names_as_list)
     username_for_query = TextEntityField(
-        valid_strings=SharedExpensesApp.enrolled_usernames)
+        valid_strings=SharedFinancesCalculator.enrolled_usernames)
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
         """
@@ -101,7 +101,7 @@ class AddDebt(Intent):
 
     author_is_borrower = BoolEntityField(message_contains=("jag", "i"))
     author_is_lender = BoolEntityField(message_contains=("ut", "mig", "me"))
-    other_person = TextEntityField(valid_strings=SharedExpensesApp
+    other_person = TextEntityField(valid_strings=SharedFinancesCalculator
                                    .enrolled_usernames)
     amount = IntEntityField()
 
@@ -120,7 +120,7 @@ class GetDebts(Intent):
     trail = ("skuld", "skulder", "debts", "lån", "lånat", "lånade")
 
     borrower_name = TextEntityField(
-        valid_strings=SharedExpensesApp.enrolled_usernames)
+        valid_strings=SharedFinancesCalculator.enrolled_usernames)
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         return self.ability.get_debts(message)
@@ -137,7 +137,7 @@ class RepayDebt(Intent):
 
     repaid_amount = IntEntityField()
     mentioned_user = TextEntityField(
-        valid_strings=SharedExpensesApp.enrolled_usernames)
+        valid_strings=SharedFinancesCalculator.enrolled_usernames)
     author_is_borrower = BoolEntityField(message_contains=("jag", "i"))
 
     def respond(self, message: Message) -> Reply | ReplyStream:
