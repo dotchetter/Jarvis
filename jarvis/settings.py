@@ -12,6 +12,7 @@ DEV_MODE = False
 DB_NAME_PROD = os.getenv("MONGO_DB_NAME_PROD")
 DB_NAME_DEV = os.getenv("MONGO_DB_NAME_DEV")
 APPEND_LOG_FILES = True
+USE_TEST_SERVER = False
 
 MIDDLEWARE = {
 
@@ -48,8 +49,8 @@ DATABASE = {
 
 CLIENT = {
     "class": "pyttman.clients.community.discord.client.DiscordClient",
-    "token": os.getenv("DISCORD_TOKEN_DEV") if DEV_MODE else os.getenv("DISCORD_TOKEN_PROD"),
-    "guild": os.getenv("DISCORD_GUILD_DEV") if DEV_MODE else os.getenv("DISCORD_GUILD_PROD"),
+    "token": os.getenv("DISCORD_TOKEN_DEV") if USE_TEST_SERVER else os.getenv("DISCORD_TOKEN_PROD"),
+    "guild": os.getenv("DISCORD_GUILD_DEV") if USE_TEST_SERVER else os.getenv("DISCORD_GUILD_PROD"),
     "discord_intent_flags": {
         "message_content": True,
         "dm_messages": True,
