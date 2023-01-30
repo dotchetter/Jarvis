@@ -78,9 +78,14 @@ class User(me.Document):
     :field name:
         String, username of a user.
     """
+    _profile = me.ReferenceField(UserProfile, null=True)
     username = me.StringField(required=True, unique=True)
     aliases = me.ListField(me.DynamicField())
     meta = {"queryset_class": UserQuerySet}
-    profile = me.ReferenceField(UserProfile, null=True)
-    enrolled_features = me.ListField(me.EnumField(Features))
+    enrolled_features = me.ListField(me.IntField())
 
+    @property
+    def profile(self) -> UserProfile:
+        if self._profile is None:
+            self._profile = UserProfile()
+        return self._profile
