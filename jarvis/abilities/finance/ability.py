@@ -16,7 +16,8 @@ from jarvis.abilities.finance.intents import (
     AddDebt,
     GetDebts,
     RepayDebt,
-    UndoLastClosingCalculatedExpense,)
+    UndoLastClosingCalculatedExpense,
+    EnterMonthlyIncome,)
 from jarvis.abilities.finance.models import Debt, AccountingEntry, Expense
 from jarvis.abilities.finance.month import Month
 from jarvis.models import User
@@ -38,7 +39,8 @@ class FinanceAbility(Ability):
                AddDebt,
                GetDebts,
                RepayDebt,
-               UndoLastClosingCalculatedExpense,)
+               UndoLastClosingCalculatedExpense,
+               EnterMonthlyIncome,)
 
     def before_create(self) -> None:
         """
@@ -88,7 +90,6 @@ class FinanceAbility(Ability):
             pyttman.logger.log(f"No db User matched: {store_for_username}")
             return Reply(self.storage["default_replies"]["no_users_matches"])
 
-        username = user.username.capitalize()
         Expense.objects.create(price=expense_value,
                                expense_name=expense_name,
                                user_reference=user,
@@ -301,55 +302,46 @@ class FinanceAbility(Ability):
         """
         Perform an accounting entry, splitting expenses and create a balance
         sheet for users involved in the shared expenses' calculation.
-        :param message:
-        :return:
         """
+        calculator = SharedFinancesCalculator()
+        participant_users = calculator.get_enrolled_users()
+        try:
+            calculations = calculator.calculate_split(
+                participant_users=participant_users,
+                month_for_query=message.entities["month"])
+        except ValueError:
+            return Reply("Åtminstone en användare har inte angivit månadsinkomst.")
+
         reply_stream = ReplyStream()
-        buckets = SharedFinancesCalculator.calculate_split(message.entities["month"])
-        top_paying_bucket: SharedFinancesCalculator.SharedExpenseCalculation = buckets.pop()
-        top_paying_username = top_paying_bucket.user.username.capitalize()
+        accounting_entry = AccountingEntry()
+        dt_fmt = pyttman.app.settings.DATETIME_FORMAT
+        reply_stream.put(f"Konteringsunderlag: {datetime.now().strftime(dt_fmt)}")
 
-        accounting_entry = AccountingEntry(top_paying_user=top_paying_bucket.user)
-        accounting_entry.participants.append(top_paying_bucket.user)
+        while calculations:
+            calculation = calculations.pop()
+            username = calculation.user.username.capitalize()
+            accounting_entry.participants.append(calculation.user)
 
-        reply_stream.put(f"{top_paying_username} har betalat "
-                         f"**{top_paying_bucket.paid_amount}:-** denna månad.")
+            msg = f"**{username}**:\n"
+            msg += f"{username} har betalat {calculation.paid_amount:.2f}:- " \
+                  f"denna period vilket utgör {calculation.quota_of_total * 100:.2f}% av " \
+                  f"det totala beloppet {calculator.total_expense_sum:.2f}:-.\n"
+            msg += f"{username} har en månadslön på {calculation.user.profile.gross_income}:- " \
+                   f"vilket är {calculation.income_quotient * 100:.2f}:- av den " \
+                   f"totala inkomsten av deltagarna.\n"
 
-        while buckets:
-            current_bucket = buckets.pop()
-            bucket_username = current_bucket.user.username.capitalize()
-            compensation_without_debts = current_bucket.compensation_amount
-            accounting_entry.participants.append(current_bucket.user)
-
-            if current_bucket.paid_amount == top_paying_bucket.paid_amount:
-                msg = f"{bucket_username} har betalat lika mycket " \
-                      f"som {top_paying_username}: **" \
-                      f"{current_bucket.paid_amount}:-**, " \
-                      f"ingen kompensation behövs."
+            if calculation.ingoing_compensation:
+                msg += f"{username} har överbetalat sin del och ska bli kompenserad " \
+                       f"med {calculation.ingoing_compensation:.2f}:- från övriga " \
+                       f"deltagare."
+            elif calculation.outgoing_compensation:
+                msg += f"{username} har inte betalat sin del och ska kompensera " \
+                       f"övriga deltagare med {calculation.outgoing_compensation:.2f}:- "
             else:
-                msg = f"{bucket_username} har betalat " \
-                      f"**{current_bucket.paid_amount}:" \
-                      f"-**, och ska kompensera {top_paying_username} med " \
-                      f"**{current_bucket.compensation_amount}:-**."
+                msg += f"{username} har betalat exakt sin kvot och ska varken " \
+                       f"kompenseras eller kompensera andra."
 
             reply_stream.put(msg)
-            SharedFinancesCalculator.balance_out_debts_for_buckets(
-                top_paying_bucket=top_paying_bucket,
-                comparison_bucket=current_bucket)
-
-            if current_bucket.compensation_amount > compensation_without_debts:
-                # There are debts to account for; sum them up and include
-                # them in the message.
-                debt_sum = Debt.objects.filter(
-                    borrower=current_bucket.user,
-                    lender=top_paying_bucket.user
-                ).sum("amount")
-
-                msg = f"{bucket_username} är skyldig {top_paying_username} " \
-                      f"{debt_sum}:-. Med denna skuld inräknad blir " \
-                      f"{bucket_username} skyldig {top_paying_username} " \
-                      f"**{current_bucket.compensation_amount}:-** istället."
-                reply_stream.put(msg)
 
             accounting_entry.accounting_result = msg
             if message.entities["close_current_period"]:

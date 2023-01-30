@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
-from typing import Collection
+from typing import Collection, Iterable
 
 from mongoengine import Q
 
@@ -18,6 +18,8 @@ class SharedFinancesCalculator:
     The resulting data describes who has to compensate whom, and
     by how much, respectively.
     """
+    def __init__(self):
+        self.total_expense_sum: Decimal = None
 
     @dataclass
     class SharedExpenseCalculation:
@@ -27,6 +29,7 @@ class SharedFinancesCalculator:
         expected_paid_amount_based_on_income: Decimal = field(default=None)
         outgoing_compensation: Decimal = field(default=None)
         ingoing_compensation: Decimal = field(default=None)
+        quota_of_total: Decimal = field(default=None)
 
     @classmethod
     def enrolled_usernames(cls):
@@ -35,44 +38,47 @@ class SharedFinancesCalculator:
     @classmethod
     def get_enrolled_users(cls, scalar=None) -> Collection[User]:
         enrolled_users = User.objects(
-            enrolled_features__contains=Features.shared_finances)
+            enrolled_features__contains=Features.shared_finances.value)
         if scalar is None:
             return enrolled_users.all()
         return enrolled_users.scalar(scalar).all()
 
-    @classmethod
-    def calculate_split(cls,
-                        month_for_query: str | None = None
+    def calculate_split(self,
+                        participant_users: Iterable[User],
+                        month_for_query: str | None = None,
                         ) -> Collection[SharedExpenseCalculation]:
         """
         Calculates the share of the total cost for each individual
         user taking part in the shared finances. Their gross
         salary is taken in to consideration when calculating.
         """
-        enrolled = cls.get_enrolled_users()
-        expense_buckets, processed = [], []
-
+        calculations, processed = [], []
         start_date, end_date = Expense.get_date_range_for_query(datetime.now().month)
-        total_sum = Expense.objects.filter(
+        total_sum = Decimal(Expense.objects.filter(
             account_for__gte=start_date,
             account_for__lte=end_date
-        ).sum("price")
+        ).sum("price"))
 
         # Get the total combined income of all participants.
-        combined_income = Decimal(sum((user.profile.gross_income for user in enrolled)))
+        try:
+            combined_income = Decimal(sum((user.profile.gross_income
+                                           for user in participant_users)))
+        except TypeError:
+            raise ValueError("At least one user is missing a gross salary. "
+                             "Calculations cannot proceed.")
 
         # Calculate how much the user has paid, and compare it to how much
         # they should've paid based on their income quotient
-        for user in enrolled:
+        for user in participant_users:
             ingoing_compensation = outgoing_compensation = Decimal(0)
-            calculation = cls.SharedExpenseCalculation(user=user)
+            calculation = self.SharedExpenseCalculation(user=user)
             paid_amount = Expense.get_expenses_for_period_and_user(
                 user=user,
                 month_for_query=month_for_query
             ).sum("price")
 
+            paid_amount = Decimal(paid_amount)
             income_quotient = user.profile.gross_income / combined_income
-            paid_amount = paid_amount
             expected_paid_amount_based_on_income = total_sum * income_quotient
 
             if expected_paid_amount_based_on_income > paid_amount:
@@ -85,8 +91,10 @@ class SharedFinancesCalculator:
             calculation.expected_paid_amount_based_on_income = expected_paid_amount_based_on_income
             calculation.ingoing_compensation = ingoing_compensation
             calculation.outgoing_compensation = outgoing_compensation
-            expense_buckets.append(calculation)
-        return expense_buckets
+            calculation.quota_of_total = calculation.paid_amount / total_sum
+            calculations.append(calculation)
+        self.total_expense_sum = total_sum
+        return calculations
 
     @classmethod
     def balance_out_debts_for_buckets(cls,

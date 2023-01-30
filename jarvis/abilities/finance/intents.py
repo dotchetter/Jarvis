@@ -7,6 +7,7 @@ from pyttman.core.intent import Intent
 
 from jarvis.abilities.finance.calculator import SharedFinancesCalculator
 from jarvis.abilities.finance.month import Month
+from jarvis.models import User
 
 
 class AddExpense(Intent):
@@ -83,7 +84,38 @@ class CalculateSplitExpenses(Intent):
     month = StringEntityField(valid_strings=Month.names_as_list)
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
-        return self.ability.calculate_split_expenses(message)
+        try:
+            return self.ability.calculate_split_expenses(message)
+        except TypeError:
+            return Reply("Det gick inte att utföra uträkningen eftersom "
+                         "det finns användare som saknar angiven "
+                         "månadsinkomst.")
+
+
+class EnterMonthlyIncome(Intent):
+    """
+    Allows users to enter an amount stored as their monthly
+    salary in their profile
+    """
+    lead = ("lön", "månadslön", "inkomst", "income", "salary")
+    description = "Ange hur mycket du har i månadslön. Beloppet används " \
+                  "som en koefficient när utgifter ska fördelas rättvist " \
+                  "mellan deltagare i delade utgifter."
+
+    income = IntEntityField()
+
+    def respond(self, message: Message) -> Reply | ReplyStream:
+        current_user = User.objects.from_message(message)
+        if income := message.entities["income"]:
+            current_user.profile.gross_income = income
+            current_user.profile.save()
+            current_user.save()
+            return Reply(f"Månadsinkomst sparad: {income}:- före skatt.")
+
+        if current_income := current_user.profile.gross_income:
+            return Reply(f"Din sparade månadsinkomst är {current_income} "
+                         f":- före skatt.")
+        return Reply(f"Du har ingen sparad månadsinkomst.")
 
 
 class AddDebt(Intent):
