@@ -324,10 +324,10 @@ class FinanceAbility(Ability):
 
             msg = f"**{username}**:\n"
             msg += f"{username} har betalat {calculation.paid_amount:.2f}:- " \
-                  f"denna period vilket utgör {calculation.quota_of_total * 100:.2f}% av " \
-                  f"det totala beloppet {calculator.total_expense_sum:.2f}:-.\n"
-            msg += f"{username} har en månadslön på {calculation.user.profile.gross_income}:- " \
-                   f"vilket är {calculation.income_quotient * 100:.2f}:- av den " \
+                   f"denna period vilket utgör {calculation.quota_of_total * 100:.2f}% av " \
+                   f"det totala beloppet {calculator.total_expense_sum:.2f}:-.\n"
+            msg += f"{username} har en månadslön som motsvarar " \
+                   f"{calculation.income_quotient * 100:.2f}:- av den " \
                    f"totala inkomsten av deltagarna.\n"
 
             if calculation.ingoing_compensation:
