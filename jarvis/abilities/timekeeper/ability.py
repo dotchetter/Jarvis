@@ -34,7 +34,7 @@ class TimeKeeper(Ability):
             duration = shift.duration
             billable_hours += duration.hour
             billable_minutes += duration.minute
-        billable_hours += billable_minutes / 60
+        billable_hours += Decimal.from_float(billable_minutes / 60)
         return Decimal(billable_hours).quantize(Decimal('.00'),
                                                 rounding=ROUND_HALF_UP)
 
