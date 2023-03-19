@@ -36,6 +36,7 @@ ABILITIES = [
     "jarvis.abilities.finance.ability.FinanceAbility",
     "jarvis.abilities.administrative.ability.AdministrativeAbility",
     "jarvis.abilities.timekeeper.ability.TimeKeeper",
+    "jarvis.abilities.weightkeeper.ability.WeightKeeper",
 ]
 
 DATABASE = {

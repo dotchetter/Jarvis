@@ -56,7 +56,7 @@ class UserProfile(me.Document):
     Holds various personal attributes
     """
     _gross_income = me.DecimalField(default=None)
-    user = me.ReferenceField('User')
+    user = me.ReferenceField("User")
 
     @property
     def gross_income(self) -> Decimal:
@@ -83,6 +83,7 @@ class User(me.Document):
     aliases = me.ListField(me.DynamicField())
     meta = {"queryset_class": UserQuerySet}
     enrolled_features = me.ListField(me.IntField())
+    weight_entries = me.ListField(me.ReferenceField("WeightEntry"))
 
     @property
     def profile(self) -> UserProfile:
