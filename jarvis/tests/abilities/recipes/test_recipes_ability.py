@@ -1,21 +1,17 @@
-from pyttman.core.containers import Message
 from pyttman.testing import PyttmanTestCase
 
-from jarvis.abilities.recipes.intents import AddRecipe
-from jarvis.models import User
+from jarvis.abilities.recipes.models import Recipe
 
 
-class TestRecipesAbility(PyttmanTestCase):
+class TestRecipes(PyttmanTestCase):
     devmode = True
 
-    def setUp(self) -> None:
-        self.mock_message = Message("Spara recept kyckling med nudlar"
-                                    " från https://www.test.com")
-
     def test_add_recipe(self):
-        intent = AddRecipe()
-        self.mock_message.author = "test_user_1"
-        self.mock_message.entities["name"] = "kyckling med nudlar"
-        self.mock_message.entities["url"] = "https://www.test.com"
+        name = "riktigt najs tacopaj".split()
+        recipe = Recipe(name=name, url="https://www.ica.se/recept/tacopaj-718120/")
+        recipe.save()
 
-        intent.respond(self.mock_message)
+        search_string = "tacopaj"
+        stored_recipe = Recipe.objects.from_keyword(search_string).first()
+
+        self.assertIsNotNone(stored_recipe)
