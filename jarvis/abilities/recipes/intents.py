@@ -34,11 +34,18 @@ class GetRecipes(Intent):
     lead = ("sök", "visa", "hitta")
     trail = ("recept",)
 
-    name = StringEntityField(span=10)
+    name = StringEntityField(prefixes=("med",), span=10)
+    from_vendor = StringEntityField(prefixes=("från",))
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         keyword = message.entities.get("name")
-        if not (matching_recipes := Recipe.objects.from_keyword(keyword).all()):
+        vendor = message.entities.get("from_vendor")
+        query = Recipe.objects.all()
+        if vendor:
+            query = Recipe.objects.filter(url__contains=vendor)
+        if keyword:
+            query = query.filter(name__in=keyword.split())
+        if not (matching_recipes := query.all()):
             return Reply("Jag hittade inga recept med det namnet.")
         stream = ReplyStream()
         for recipe in matching_recipes:
