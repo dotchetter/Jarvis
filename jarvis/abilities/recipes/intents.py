@@ -37,9 +37,8 @@ class GetRecipes(Intent):
     name = StringEntityField(span=10)
 
     def respond(self, message: Message) -> Reply | ReplyStream:
-        name_parts = message.entities.get("name").split()
-        matching_recipes = Recipe.objects(name__in=name_parts)
-        if not matching_recipes:
+        keyword = message.entities.get("name")
+        if not (matching_recipes := Recipe.objects.from_keyword(keyword).all()):
             return Reply("Jag hittade inga recept med det namnet.")
         stream = ReplyStream()
         for recipe in matching_recipes:
