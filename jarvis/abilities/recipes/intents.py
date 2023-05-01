@@ -18,7 +18,7 @@ class AddRecipe(Intent):
     url = StringEntityField(identifier=UrlIdentifier)
 
     def respond(self, message: Message) -> Reply | ReplyStream:
-        name = message.entities.get("name").split()
+        name = message.entities.get("name").casefold().split()
         url = message.entities.get("url")
         user = User.objects.from_message(message)
         recipe = Recipe.objects.create(user=user,
@@ -42,8 +42,10 @@ class GetRecipes(Intent):
         vendor = message.entities.get("from_vendor")
         query = Recipe.objects.all()
         if vendor:
+            vendor = vendor.lower()
             query = Recipe.objects.filter(url__contains=vendor)
         if keyword:
+            keyword = keyword.lower()
             query = query.filter(name__in=keyword.split())
         if not (matching_recipes := query.all()):
             return Reply("Jag hittade inga recept med det namnet.")
