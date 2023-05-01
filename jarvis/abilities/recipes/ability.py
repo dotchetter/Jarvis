@@ -1,7 +1,7 @@
 
 """
 This ability holds intents related to the
-Recpies feature of the application.
+Recipes feature of the application.
 """
 
 from pyttman.core.ability import Ability
