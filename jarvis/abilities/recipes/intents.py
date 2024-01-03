@@ -34,7 +34,7 @@ class GetRecipes(Intent):
     lead = ("sök", "visa", "hitta")
     trail = ("recept",)
 
-    name = StringEntityField(prefixes=("med",), span=10)
+    name = StringEntityField(prefixes=("med", "på"), span=10)
     from_vendor = StringEntityField(prefixes=("från",))
 
     def respond(self, message: Message) -> Reply | ReplyStream:
