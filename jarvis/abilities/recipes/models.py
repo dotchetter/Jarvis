@@ -15,6 +15,7 @@ class Recipe(me.Document):
     user = me.ReferenceField("User", required=False)
     url = me.StringField(required=True)
     name = me.ListField(required=True)
+    comment = me.StringField(required=False)
 
     @property
     def pretty(self):
