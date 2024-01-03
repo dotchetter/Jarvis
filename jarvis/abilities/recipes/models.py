@@ -14,7 +14,7 @@ class Recipe(me.Document):
     created = me.DateTimeField(defalt=lambda: datetime.now())
     user = me.ReferenceField("User", required=False)
     url = me.StringField(required=True)
-    name = me.ListField(required=True)
+    name = me.StringField(required=True)
     comment = me.StringField(required=False)
 
     @property
