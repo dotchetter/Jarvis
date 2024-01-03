@@ -51,5 +51,5 @@ class GetRecipes(Intent):
             return Reply("Jag hittade inga recept med det namnet.")
         stream = ReplyStream()
         for recipe in matching_recipes:
-            stream.put(Reply(recipe.url))
+            stream.put(Reply(recipe))
         return stream
