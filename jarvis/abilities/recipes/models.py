@@ -19,10 +19,11 @@ class Recipe(me.Document):
 
     @property
     def pretty(self):
-        name = " ".join(self.name)
-        output = f"**{name}**\n{self.url}"
+        output = f"**{self.name}**\n{self.url}"
         if self.user is not None:
             output += f"\nSkapad av {self.user.username}"
+        if self.comment:
+            output += f"\nKommentar:\n{self.comment}"
         return output
 
     def __str__(self):
