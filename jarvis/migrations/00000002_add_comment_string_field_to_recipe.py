@@ -1,7 +1,7 @@
 from mongoengine import StringField
-
 from jarvis.abilities.recipes.models import Recipe
-from jarvis.migrations import expose
+
+__doc__ = " Assign a 'comment' field to the Recipe model."
 
 
 def upgrade():
@@ -10,13 +10,11 @@ def upgrade():
         if hasattr(recipe, "comment"):
             continue
         recipe.comment = ""
+        recipe.save()
 
 
 def downgrade():
     for recipe in Recipe.objects.all():
-        if isinstance(recipe.name, str):
-            recipe.name = recipe.name.split()
+        if hasattr(recipe, "comment"):
+            del recipe.comment
             recipe.save()
-
-
-expose()
