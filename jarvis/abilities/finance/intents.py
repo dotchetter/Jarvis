@@ -155,6 +155,9 @@ class GetDebts(Intent):
     author_is_borrower = BoolEntityField(message_contains=("jag", "i"))
     borrower_name = TextEntityField(
         valid_strings=SharedFinancesCalculator.enrolled_usernames)
+    individual = BoolEntityField(message_contains=("individuell",
+                                                   "individuella",
+                                                   "individuellt"))
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         return self.ability.get_debts(message)

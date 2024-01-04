@@ -233,9 +233,13 @@ class FinanceAbility(Ability):
             except KeyError:
                 debts_by_lender[debt.lender] = debt.amount
 
-        for lender, _sum in debts_by_lender.items():
-            debt = Debt(lender=lender, borrower=borrower, amount=_sum)
-            reply_stream.put(debt)
+        if message.entities["individual"]:
+            for debt in Debt.objects.filter(borrower=borrower):
+                reply_stream.put(debt)
+        else:
+            for lender, _sum in debts_by_lender.items():
+                debt = Debt(lender=lender, borrower=borrower, amount=_sum)
+                reply_stream.put(debt)
 
         return reply_stream
 
