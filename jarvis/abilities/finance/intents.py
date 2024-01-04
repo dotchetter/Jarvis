@@ -136,6 +136,7 @@ class AddDebt(Intent):
     other_person = TextEntityField(valid_strings=SharedFinancesCalculator
                                    .enrolled_usernames)
     amount = IntEntityField()
+    comment = TextEntityField(span=10, prefixes=("för", "till"))
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         if message.entities["amount"] is None:
