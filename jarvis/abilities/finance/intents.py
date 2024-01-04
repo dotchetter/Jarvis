@@ -149,9 +149,10 @@ class GetDebts(Intent):
     Returns the sum of the debts registered for a borrower to
     a particular lender.
     """
-    lead = ("visa", "lista", "show", "get", "hämta")
-    trail = ("skuld", "skulder", "debts", "lån", "lånat", "lånade")
+    lead = ("visa", "lista", "show", "get", "hämta", "hur")
+    trail = ("skuld", "skulder", "debts", "lån", "lånat", "lånade", "skyldig")
 
+    author_is_borrower = BoolEntityField(message_contains=("jag", "i"))
     borrower_name = TextEntityField(
         valid_strings=SharedFinancesCalculator.enrolled_usernames)
 

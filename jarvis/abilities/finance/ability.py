@@ -207,8 +207,11 @@ class FinanceAbility(Ability):
         """
         reply_stream = ReplyStream()
         debts_by_lender: dict[User, int] = {}
-        borrower_name = extract_username(message, "borrower_name")
-        borrower: User = User.objects.from_username_or_alias(borrower_name)
+        if message.entities["author_is_borrower"]:
+            borrower = User.objects.from_message(message)
+        else:
+            borrower_name = extract_username(message, "borrower_name")
+            borrower: User = User.objects.from_username_or_alias(borrower_name)
         debt_sum = Debt.objects.filter(borrower=borrower).sum("amount")
 
         if borrower is None:
