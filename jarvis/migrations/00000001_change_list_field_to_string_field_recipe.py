@@ -1,5 +1,6 @@
 from jarvis.abilities.recipes.models import Recipe
-from jarvis.migrations import expose
+
+__doc__ = "Change the name field in Recipe to Text field instead of List field"
 
 
 def upgrade():
@@ -14,6 +15,3 @@ def downgrade():
         if isinstance(recipe.name, str):
             recipe.name = recipe.name.split()
             recipe.save()
-
-
-expose()
