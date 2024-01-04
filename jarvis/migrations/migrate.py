@@ -12,6 +12,9 @@ if __name__ == "__main__":
     # Set the path base dir to the current working directory
     # so that the migrations module can be imported.
 
+    if (version_cursor := MigrationVersion.objects.first()) is None:
+        version_cursor = MigrationVersion.objects.create()
+
     migrations_dir = Path(app.settings.APP_BASE_DIR) / "migrations"
     if not migrations_dir.exists():
         raise FileNotFoundError(f"Could not find migrations directory: "
@@ -32,8 +35,6 @@ if __name__ == "__main__":
     else:
         steps_limit = None
 
-    if (version_cursor := MigrationVersion.objects.first()) is None:
-        version_cursor = MigrationVersion.objects.create()
 
     current_version = file_version = version_cursor.version
     upgrade = "upgrade" in args
