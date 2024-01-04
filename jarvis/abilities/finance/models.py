@@ -147,6 +147,7 @@ class Debt(me.Document):
     lender: User = me.ReferenceField(User, required=True)
     amount: float = me.FloatField(default=0.0)
     created: datetime = me.DateTimeField(default=lambda: datetime.now())
+    comment = me.StringField(required=False)
 
     def __str__(self):
         """
@@ -157,8 +158,8 @@ class Debt(me.Document):
         lender = f":bust_in_silhouette: **" \
                  f"{self.lender.username.capitalize()}**\n"
         amount = f":money_with_wings: **{self.amount}:-**\n"
-
-        return lender + amount + sep
+        comment = f":speech_left: **{self.comment}**\n" if self.comment else ""
+        return lender + amount + comment + sep
 
 
 class AccountingEntry(me.Document):

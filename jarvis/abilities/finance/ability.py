@@ -154,6 +154,7 @@ class FinanceAbility(Ability):
         author_is_borrower = message.entities["author_is_borrower"]
         author_is_lender = message.entities["author_is_lender"]
         amount = message.entities["amount"]
+        comment = message.entities["comment"]
 
         if author_is_lender:
             # author_is_lender supersedes author_is_borrower
@@ -175,7 +176,10 @@ class FinanceAbility(Ability):
                    "Försök igen :slight_smile:"
 
         # Create the debt entry
-        Debt.objects.create(borrower=borrower, lender=lender, amount=amount)
+        Debt.objects.create(borrower=borrower,
+                            lender=lender,
+                            amount=amount,
+                            comment=comment)
         total_debt_balance = Debt.objects.filter(
             borrower=borrower, lender=lender
         ).sum("amount")
@@ -203,8 +207,11 @@ class FinanceAbility(Ability):
         """
         reply_stream = ReplyStream()
         debts_by_lender: dict[User, int] = {}
-        borrower_name = extract_username(message, "borrower_name")
-        borrower: User = User.objects.from_username_or_alias(borrower_name)
+        if message.entities["author_is_borrower"]:
+            borrower = User.objects.from_message(message)
+        else:
+            borrower_name = extract_username(message, "borrower_name")
+            borrower: User = User.objects.from_username_or_alias(borrower_name)
         debt_sum = Debt.objects.filter(borrower=borrower).sum("amount")
 
         if borrower is None:
@@ -226,9 +233,13 @@ class FinanceAbility(Ability):
             except KeyError:
                 debts_by_lender[debt.lender] = debt.amount
 
-        for lender, _sum in debts_by_lender.items():
-            debt = Debt(lender=lender, borrower=borrower, amount=_sum)
-            reply_stream.put(debt)
+        if message.entities["individual"]:
+            for debt in Debt.objects.filter(borrower=borrower):
+                reply_stream.put(debt)
+        else:
+            for lender, _sum in debts_by_lender.items():
+                debt = Debt(lender=lender, borrower=borrower, amount=_sum)
+                reply_stream.put(debt)
 
         return reply_stream
 

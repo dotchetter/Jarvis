@@ -136,6 +136,7 @@ class AddDebt(Intent):
     other_person = TextEntityField(valid_strings=SharedFinancesCalculator
                                    .enrolled_usernames)
     amount = IntEntityField()
+    comment = TextEntityField(span=10, prefixes=("för", "till"))
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         if message.entities["amount"] is None:
@@ -148,11 +149,15 @@ class GetDebts(Intent):
     Returns the sum of the debts registered for a borrower to
     a particular lender.
     """
-    lead = ("visa", "lista", "show", "get", "hämta")
-    trail = ("skuld", "skulder", "debts", "lån", "lånat", "lånade")
+    lead = ("visa", "lista", "show", "get", "hämta", "hur")
+    trail = ("skuld", "skulder", "debts", "lån", "lånat", "lånade", "skyldig")
 
+    author_is_borrower = BoolEntityField(message_contains=("jag", "i"))
     borrower_name = TextEntityField(
         valid_strings=SharedFinancesCalculator.enrolled_usernames)
+    individual = BoolEntityField(message_contains=("individuell",
+                                                   "individuella",
+                                                   "individuellt"))
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         return self.ability.get_debts(message)

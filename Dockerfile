@@ -1,5 +1,5 @@
 #Create a ubuntu base image with python 3 installed.
-FROM python:3.10
+FROM python:3.11
 
 #Set the working directory
 WORKDIR /
@@ -15,5 +15,6 @@ RUN pip3 install -r requirements.txt
 #Expose the required port for MongoDB Atlas
 EXPOSE 42487
 
-#Run Jarvis with Pyttman CLI
+# Run migrations and start Jarvis
+CMD pyttman runfile jarvis jarvis/migrations/migrate.py upgrade
 CMD pyttman runclient jarvis

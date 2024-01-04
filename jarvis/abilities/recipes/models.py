@@ -14,14 +14,16 @@ class Recipe(me.Document):
     created = me.DateTimeField(defalt=lambda: datetime.now())
     user = me.ReferenceField("User", required=False)
     url = me.StringField(required=True)
-    name = me.ListField(required=True)
+    name = me.StringField(required=True)
+    comment = me.StringField(required=False)
 
     @property
     def pretty(self):
-        name = " ".join(self.name)
-        output = f"**{name}**\n{self.url}"
+        output = f"**{self.name}**\n{self.url}"
         if self.user is not None:
             output += f"\nSkapad av {self.user.username}"
+        if self.comment:
+            output += f"\nKommentar:\n{self.comment}"
         return output
 
     def __str__(self):

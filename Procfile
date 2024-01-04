@@ -1,1 +1,1 @@
-worker: pyttman runclient jarvis
+worker: pyttman runfile jarvis jarvis/migrations/migrate.py upgrade && pyttman runclient jarvis
