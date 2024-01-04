@@ -154,6 +154,7 @@ class FinanceAbility(Ability):
         author_is_borrower = message.entities["author_is_borrower"]
         author_is_lender = message.entities["author_is_lender"]
         amount = message.entities["amount"]
+        comment = message.entities["comment"]
 
         if author_is_lender:
             # author_is_lender supersedes author_is_borrower
@@ -175,7 +176,10 @@ class FinanceAbility(Ability):
                    "Försök igen :slight_smile:"
 
         # Create the debt entry
-        Debt.objects.create(borrower=borrower, lender=lender, amount=amount)
+        Debt.objects.create(borrower=borrower,
+                            lender=lender,
+                            amount=amount,
+                            comment=comment)
         total_debt_balance = Debt.objects.filter(
             borrower=borrower, lender=lender
         ).sum("amount")
