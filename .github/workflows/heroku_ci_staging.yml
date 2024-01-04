@@ -3,6 +3,7 @@ name: Automated CI/CD Heroku [STAGE]
 
 # Run workflow on every push to master branch.
 on:
+  workflow_dispatch: {}
   push:
     branches: [develop]
 
