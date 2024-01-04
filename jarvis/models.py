@@ -5,6 +5,14 @@ from mongoengine import QuerySet
 from pyttman.core.containers import Message
 
 
+class MigrationVersion(me.Document):
+    """
+    This model is used to keep track of the current
+    migration version of the database.
+    """
+    version = me.IntField(required=True, default=0)
+
+
 class UserQuerySet(QuerySet):
     """
     Custom metaclass for User queries
