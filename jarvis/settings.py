@@ -12,7 +12,7 @@ DEV_MODE = False
 DB_NAME_PROD = os.getenv("MONGO_DB_NAME_PROD")
 DB_NAME_DEV = os.getenv("MONGO_DB_NAME_DEV")
 APPEND_LOG_FILES = True
-USE_TEST_SERVER = False
+USE_TEST_SERVER = os.getenv("USE_TEST_SERVER") == "True"
 
 MIDDLEWARE = {
 
