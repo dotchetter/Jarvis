@@ -1,5 +1,5 @@
 # Your workflow name.
-name: Automated CI/CD Heroku
+name: Automated CI/CD Heroku [STAGE]
 
 # Run workflow on every push to master branch.
 on:
