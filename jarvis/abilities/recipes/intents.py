@@ -18,7 +18,7 @@ class AddRecipe(Intent):
     url = StringEntityField(identifier=UrlIdentifier)
 
     def respond(self, message: Message) -> Reply | ReplyStream:
-        name = message.entities.get("name").casefold().split()
+        name = message.entities.get("name").casefold()
         url = message.entities.get("url")
         user = User.objects.from_message(message)
         recipe = Recipe.objects.create(user=user,
