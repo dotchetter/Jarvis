@@ -23,8 +23,7 @@ class TestExpenseModel(TestCase):
 
     def setUp(self):
         self.mock_alias = "anonymous"
-        self.user = User.objects.filter(
-            aliases__contains=self.mock_alias).first()
+        self.user = User.objects.first()
         self.erase_all_expenses_in_db()
 
     def tearDown(self) -> None:
@@ -57,3 +56,23 @@ class TestExpenseModel(TestCase):
         # Clean the db of pre-existing expenses
         for expense in Expense.objects.filter(user_reference=self.user):
             expense.delete()
+
+    def test_recurring_expenses(self):
+
+        normal_expense = Expense(expense_name="NormalExpense",
+                                 user_reference=self.user,
+                                 price=100)
+        normal_expense.save()
+        recurring_expense = Expense(expense_name="RecurringExpense",
+                                    user_reference=self.user,
+                                    price=100,
+                                    recurring_monthly=True)
+        recurring_expense.save()
+
+        recurring_expenses_for_user = Expense.objects.recurring_for_user(self.user)
+        self.assertEqual(len(recurring_expenses_for_user), 1)
+        self.assertTrue(recurring_expenses_for_user.first().recurring_monthly)
+
+        normal_expenses = Expense.get_expenses_for_period_and_user(self.user, "january")
+        self.assertFalse(normal_expenses.first().recurring_monthly)
+

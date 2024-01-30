@@ -21,6 +21,15 @@ class ExpenseQuerySet(QuerySet):
         """
         return self.order_by("-created").first()
 
+    def recurring_for_user(self, user: User) -> QuerySet:
+        """
+        Returns all recurring expenses for the given user.
+        :param user: User owning the Expense documents
+        :return: QuerySet[Expense]
+        """
+        return self.filter(user_reference=user,
+                           recurring_monthly=True)
+
 
 class Expense(me.Document):
     """
@@ -36,6 +45,7 @@ class Expense(me.Document):
     created = me.DateTimeField(default=lambda: datetime.now())
     account_for = me.DateField(default=lambda: datetime.now())
     name = me.StringField(required=False)
+    recurring_monthly = me.BooleanField(default=False)
 
     meta = {"queryset_class": ExpenseQuerySet}
 
