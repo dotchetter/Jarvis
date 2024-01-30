@@ -2,7 +2,7 @@ from typing import Union
 
 from pyttman.core.containers import Message, Reply, ReplyStream
 from pyttman.core.entity_parsing.fields import TextEntityField, \
-    BoolEntityField, IntEntityField, StringEntityField, FloatEntityField
+    BoolEntityField, IntEntityField, StringEntityField
 from pyttman.core.intent import Intent
 
 from jarvis.abilities.finance.calculator import SharedFinancesCalculator
@@ -20,7 +20,7 @@ class AddExpense(Intent):
     expense_name = TextEntityField(span=10)
     store_for_next_month = BoolEntityField(message_contains=("nästa",
                                                              "månad"))
-    expense_value = FloatEntityField()
+    expense_value = IntEntityField()
     store_for_username = TextEntityField(valid_strings=SharedFinancesCalculator
                                          .enrolled_usernames)
 
