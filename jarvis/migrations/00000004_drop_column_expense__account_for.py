@@ -5,7 +5,9 @@ __doc__ = "Remove the 'account_for' column in Expenses, made redundant"
 
 
 def upgrade():
-    Expense.objects().update(unset__account_for=1)
+    for exp in Expense.objects.all():
+        del exp.account_for
+        exp.save()
 
 
 def downgrade():
