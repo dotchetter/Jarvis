@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import mongoengine as me
 import pandas
@@ -36,14 +36,18 @@ class ExpenseQuerySet(QuerySet):
 
     def within_period(self,
                       range_start: datetime,
-                      range_end: datetime,
+                      range_end: datetime = None,
                       user: User = None) -> QuerySet:
         """
         Returns Expense instances for given user
         """
-        return self.filter(user_reference=user,
-                           created__gte=range_start,
-                           created__lte=range_end)
+        if range_end is None:
+            range_end = datetime.now() + timedelta(days=1)
+        query = self.filter(created__gte=range_start,
+                            created__lte=range_end)
+        if user is not None:
+            query = query.filter(user_reference=user)
+        return query
 
 
 class Expense(me.Document):
