@@ -1,23 +1,12 @@
 from datetime import datetime
 from typing import Collection
 
-import pandas
 import pyttman
-from dateutil.relativedelta import relativedelta
-from mongoengine import QuerySet
 from pyttman.core.ability import Ability
 from pyttman.core.containers import Message, ReplyStream, Reply
 
 from jarvis.abilities.finance.calculator import SharedFinancesCalculator
-from jarvis.abilities.finance.intents import (
-    AddExpense,
-    GetExpenses,
-    CalculateSplitExpenses,
-    AddDebt,
-    GetDebts,
-    RepayDebt,
-    UndoLastClosingCalculatedExpense,
-    EnterMonthlyIncome,)
+from jarvis.abilities.finance import intents
 from jarvis.abilities.finance.models import Debt, AccountingEntry, Expense
 from jarvis.abilities.finance.month import Month
 from jarvis.models import User
@@ -33,14 +22,15 @@ class FinanceAbility(Ability):
     expenses at home, to make splitting bills fair
     and square.
     """
-    intents = (AddExpense,
-               GetExpenses,
-               CalculateSplitExpenses,
-               AddDebt,
-               GetDebts,
-               RepayDebt,
-               UndoLastClosingCalculatedExpense,
-               EnterMonthlyIncome,)
+    intents = (intents.AddExpense,
+               intents.GetExpenses,
+               intents.CalculateSplitExpenses,
+               intents.AddDebt,
+               intents.GetDebts,
+               intents.RepayDebt,
+               intents.UndoLastClosingCalculatedExpense,
+               intents.EnterMonthlyIncome,
+               intents.UndoLastExpense)
 
     def before_create(self) -> None:
         """
