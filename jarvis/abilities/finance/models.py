@@ -14,16 +14,19 @@ class ExpenseQuerySet(QuerySet):
     used when querying the Expense model.
     """
 
-    def latest(self):
+    def latest(self, user=None):
         """
         Returns the most recently recorded Expense.
         :return:
         """
-        return self.order_by("-created").first()
+        result = self.order_by("-created")
+        if user is not None:
+            result = result.filter(user_reference=user)
+        return result.first()
 
-    def recurring_for_user(self, user: User) -> QuerySet:
+    def recurring(self, user: User = None) -> QuerySet:
         """
-        Returns all recurring expenses for the given user.
+        Returns all recurring expenses.
         :param user: User owning the Expense documents
         :return: QuerySet[Expense]
         """
