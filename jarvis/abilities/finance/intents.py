@@ -83,12 +83,6 @@ class CalculateSplitExpenses(Intent):
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
         return self.ability.calculate_split_expenses(message)
-        try:
-            pass
-        except TypeError as e:
-            return Reply("Det gick inte att utföra uträkningen eftersom "
-                         "det finns användare som saknar angiven "
-                         "månadsinkomst.")
 
 
 class EnterMonthlyIncome(Intent):
