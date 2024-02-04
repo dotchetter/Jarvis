@@ -54,9 +54,6 @@ class SharedFinancesCalculator:
         salary is taken in to consideration when calculating.
         """
         calculations, processed = [], []
-        if range_end is None:
-            range_end = datetime.now() + timedelta(days=1)
-
         total_sum = Decimal(
             Expense.objects.within_period(range_start, range_end).sum("price"))
 
