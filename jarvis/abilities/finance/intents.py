@@ -17,9 +17,7 @@ class AddExpense(Intent):
     lead = ("spara", "ny", "nytt", "new", "save", "store")
     trail = ("utgift", "expense", "utlägg", "purchase")
 
-    expense_name = TextEntityField(span=10)
-    store_for_next_month = BoolEntityField(message_contains=("nästa",
-                                                             "månad"))
+    expense_name = TextEntityField(span=10, exclude=("för", "till"))
     expense_value = IntEntityField()
     store_for_username = TextEntityField(valid_strings=SharedFinancesCalculator
                                          .enrolled_usernames)
@@ -52,7 +50,7 @@ class GetExpenses(Intent):
                                                      "summed", "totalt",
                                                      "totala", "total"))
     show_most_recent_expense = BoolEntityField(message_contains=("senaste",))
-    month = TextEntityField(valid_strings=Month.names_as_list)
+    month = TextEntityField(valid_strings=Month.names_as_list, default=None)
     username_for_query = TextEntityField(
         valid_strings=SharedFinancesCalculator.enrolled_usernames)
 
@@ -195,6 +193,7 @@ class UndoLastClosingCalculatedExpense(Intent):
         if deleted_entry is None:
             return Reply("Det fanns ingen kontering att radera.")
         return Reply(f"Konteringen från {deleted_entry.created} har raderats.")
+
 
 class UndoLastExpense(Intent):
     """

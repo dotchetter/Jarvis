@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Collection, Iterable
 
@@ -45,7 +45,8 @@ class SharedFinancesCalculator:
 
     def calculate_split(self,
                         participant_users: Iterable[User],
-                        month_for_query: str | None = None,
+                        range_start: datetime,
+                        range_end: datetime = None,
                         ) -> Collection[SharedExpenseCalculation]:
         """
         Calculates the share of the total cost for each individual
@@ -53,11 +54,11 @@ class SharedFinancesCalculator:
         salary is taken in to consideration when calculating.
         """
         calculations, processed = [], []
-        start_date, end_date = Expense.get_date_range_for_query(datetime.now().month)
-        total_sum = Decimal(Expense.objects.filter(
-            account_for__gte=start_date,
-            account_for__lte=end_date
-        ).sum("price"))
+        if range_end is None:
+            range_end = datetime.now() + timedelta(days=1)
+
+        total_sum = Decimal(
+            Expense.objects.within_period(range_start, range_end).sum("price"))
 
         # Get the total combined income of all participants.
         try:
@@ -72,9 +73,10 @@ class SharedFinancesCalculator:
         for user in participant_users:
             ingoing_compensation = outgoing_compensation = Decimal(0)
             calculation = self.SharedExpenseCalculation(user=user)
-            paid_amount = Expense.get_expenses_for_period_and_user(
+            paid_amount = Expense.objects.within_period(
                 user=user,
-                month_for_query=month_for_query
+                start_date=range_start,
+                end_date=range_end
             ).sum("price")
 
             paid_amount = Decimal(paid_amount)

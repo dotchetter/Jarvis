@@ -3,6 +3,7 @@ from datetime import datetime
 import mongoengine as me
 import pandas
 from mongoengine import QuerySet
+from pyttman import app
 
 from jarvis.abilities.finance.month import Month
 from jarvis.models import User

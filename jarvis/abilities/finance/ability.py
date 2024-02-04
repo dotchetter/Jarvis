@@ -56,42 +56,24 @@ class FinanceAbility(Ability):
         Add a shared expense.
         """
         stream = ReplyStream()
-        now = account_for_date = datetime.now()
         expense_name = message.entities.get("expense_name")
         expense_value = message.entities.get("expense_value")
-        for_next_month = message.entities.get("store_for_next_month")
         store_for_username = extract_username(message, "store_for_username")
-        current_month_start = now - relativedelta(day=1, hour=0, minute=0)
-        current_month_end = now + relativedelta(day=31, hour=23, minute=59)
-        accounting_entry_for_month = AccountingEntry.objects.filter(
-            created__gte=current_month_start,
-            created__lte=current_month_end)
 
-        if None in (expense_value, expense_name):
+        if not expense_value and expense_name:
             return Reply("Du måste ange både namn och "
                          "pris på vad du har köpt.")
-
-        if for_next_month or accounting_entry_for_month:
-            account_for_date += pandas.DateOffset(months=1)
-            account_for_date = account_for_date.replace(day=1)
 
         if (user := User.objects.from_username_or_alias(
                 store_for_username)) is None:
             pyttman.logger.log(f"No db User matched: {store_for_username}")
             return Reply(self.storage["default_replies"]["no_users_matches"])
 
-        Expense.objects.create(price=expense_value,
-                               expense_name=expense_name,
-                               user_reference=user,
-                               account_for=account_for_date)
-
+        expense = Expense.objects.create(price=expense_value,
+                                         expense_name=expense_name,
+                                         user_reference=user)
         stream.put(f"Utgiften sparades för {user.username.capitalize()}. ")
-
-        if for_next_month:
-            stream.put("Utlägget har sparats för nästa månad.")
-        elif accounting_entry_for_month:
-            stream.put("Eftersom denna månad har konterats redan, har "
-                       "utlägget sparats för nästa månad automatiskt.")
+        stream.put(expense)
         return stream
 
     def get_expenses(self, message: Message):
@@ -100,6 +82,7 @@ class FinanceAbility(Ability):
         """
         username_for_query = extract_username(message, "username_for_query")
         get_latest = message.entities["show_most_recent_expense"]
+        last_accounting_entry_date = self._get_last_accounting_entry_date()
 
         try:
             user = User.objects.from_username_or_alias(username_for_query)
@@ -107,20 +90,11 @@ class FinanceAbility(Ability):
             pyttman.logger.log(f"No db User matched: {username_for_query}")
             return Reply(self.storage["default_replies"]["no_users_matches"])
 
-        try:
-            month_for_query = message.entities.get("month")
-        except AttributeError:
-            month_for_query = None
-
-        expenses: QuerySet = Expense.get_expenses_for_period_and_user(
-            month_for_query=month_for_query,
-            user=user)
-
-        if get_latest is True:
-            latest_expense = Expense.objects.filter(
-                user_reference=user
-            ).latest()
+        if get_latest:
+            latest_expense = Expense.objects.latest(user=user)
             return Reply(latest_expense)
+
+        expenses = Expense.objects.within_period(user=user)
 
         if not expenses:
             return Reply(
@@ -298,18 +272,21 @@ class FinanceAbility(Ability):
                           f"{total_debt_balance}:-")
         return reply
 
-    @staticmethod
-    def calculate_split_expenses(message):
+    def calculate_split_expenses(self, message):
         """
         Perform an accounting entry, splitting expenses and create a balance
         sheet for users involved in the shared expenses' calculation.
         """
         calculator = SharedFinancesCalculator()
         participant_users = calculator.get_enrolled_users()
+
+        # If there's an accounting entry, use that as the start date for the expenses to get
+        query_range_start = self._get_last_accounting_entry_date()
+
         try:
             calculations = calculator.calculate_split(
                 participant_users=participant_users,
-                month_for_query=message.entities["month"])
+                range_start=query_range_start)
         except ValueError:
             return Reply("Åtminstone en användare har inte angivit månadsinkomst.")
 
@@ -347,10 +324,17 @@ class FinanceAbility(Ability):
             accounting_entry.accounting_result = msg
             if message.entities["close_current_period"]:
                 accounting_entry.save()
-                reply_stream.put("Innevarande månad har stängts. Nya utgifter "
-                                 "som matas in under resten av denna månad "
-                                 "kommer bokföras för nästa månad automatiskt.")
+                reply_stream.put("Innevarande månad har stängts.")
         return reply_stream
+
+    @staticmethod
+    def _get_last_accounting_entry_date() -> datetime | None:
+        """
+        Get the date of the last accounting entry. If there's no entry, return None.
+        """
+        if last_account_entry := AccountingEntry.objects.order_by('-created').first():
+            return last_account_entry.created
+        return None
 
     @classmethod
     def delete_last_created_account_entry(cls) -> None:
