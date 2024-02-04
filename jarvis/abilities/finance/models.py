@@ -76,7 +76,7 @@ class Expense(me.Document):
         price = f":money_with_wings: **{self.price}**:-\n"
 
         account_month = Month(self.created.month).name.capitalize()
-        year = self.account_for.year
+        year = self.created.year
         account_month = f":calendar: **{account_month} {year}**\n"
         created_date = self.created.strftime(self.output_date_format)
         created_date = f":clock: **{created_date}**\n"
