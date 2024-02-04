@@ -82,9 +82,10 @@ class CalculateSplitExpenses(Intent):
     month = StringEntityField(valid_strings=Month.names_as_list)
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
+        return self.ability.calculate_split_expenses(message)
         try:
-            return self.ability.calculate_split_expenses(message)
-        except TypeError:
+            pass
+        except TypeError as e:
             return Reply("Det gick inte att utföra uträkningen eftersom "
                          "det finns användare som saknar angiven "
                          "månadsinkomst.")
