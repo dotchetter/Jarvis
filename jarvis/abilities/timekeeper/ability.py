@@ -16,8 +16,8 @@ from jarvis.models import User
 class TimeKeeper(Ability):
     intents = (intents.CreateWorkShift,
                intents.StopWorkShift,
-               intents.GetWorkshift,
-               intents.CreateWorkshiftsFromString,
+               intents.GetWorkShift,
+               intents.CreateWorkShiftFromString,
                intents.CreateNewProject,
                intents.SetProjectAsDefault,
                intents.ActivateProject,

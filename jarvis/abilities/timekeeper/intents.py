@@ -60,7 +60,7 @@ class StopWorkShift(Intent):
         return self.ability.stop_current_workshift(message)
 
 
-class GetWorkshift(Intent):
+class GetWorkShift(Intent):
     """
     Get information about a currently running work shift.
     """
@@ -76,9 +76,10 @@ class GetWorkshift(Intent):
         return self.ability.get_worked_hours(message)
 
 
-class CreateWorkshiftsFromString(Intent):
+class CreateWorkShiftFromString(Intent):
     """
-    Store a workshift by entering timestamp or datetime stamps manually.
+    Store a work shift by entering timestamp
+    or datetime stamps manually.
     """
     help_string = __doc__
     lead = ("lägg", "spara", "skapa", "nytt")
