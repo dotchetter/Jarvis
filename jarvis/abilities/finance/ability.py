@@ -361,3 +361,13 @@ class FinanceAbility(Ability):
             last_entry.delete()
             return last_entry
         return None
+
+    @staticmethod
+    def delete_last_expense(message):
+        """
+        Delete the last expense entry.
+        """
+        user = User.objects.from_message(message)
+        last_expense = Expense.objects.latest(user=user)
+        last_expense.delete()
+        return last_expense
