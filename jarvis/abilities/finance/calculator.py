@@ -19,7 +19,7 @@ class SharedFinancesCalculator:
     by how much, respectively.
     """
     def __init__(self):
-        self.total_expense_sum: Decimal = None
+        self.total_expense_sum: Decimal = Decimal(0)
 
     @dataclass
     class SharedExpenseCalculation:
