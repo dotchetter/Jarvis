@@ -12,7 +12,7 @@ DEV_MODE = False
 DB_NAME_PROD = os.getenv("MONGO_DB_NAME_PROD")
 DB_NAME_DEV = os.getenv("MONGO_DB_NAME_DEV")
 APPEND_LOG_FILES = True
-USE_TEST_SERVER = os.getenv("USE_TEST_SERVER") == "True"
+USE_TEST_SERVER = os.environ["USE_TEST_SERVER"].lower() == "true"
 
 MIDDLEWARE = {
 
@@ -68,7 +68,7 @@ LOG_FILE_DIR = APP_BASE_DIR / Path("logs")
 LOG_TO_STDOUT = True
 
 APP_NAME = "jarvis"
-APP_VERSION = "1.6.0"
+APP_VERSION = "1.9.1"
 DATETIME_FORMAT = "%Y-%m-%d-%H:%M"
 TIMESTAMP_FORMAT = "%H:%M"
 

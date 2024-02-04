@@ -17,9 +17,7 @@ class AddExpense(Intent):
     lead = ("spara", "ny", "nytt", "new", "save", "store")
     trail = ("utgift", "expense", "utlägg", "purchase")
 
-    expense_name = TextEntityField(span=10)
-    store_for_next_month = BoolEntityField(message_contains=("nästa",
-                                                             "månad"))
+    expense_name = TextEntityField(span=10, exclude=("för", "till"))
     expense_value = IntEntityField()
     store_for_username = TextEntityField(valid_strings=SharedFinancesCalculator
                                          .enrolled_usernames)
@@ -52,7 +50,7 @@ class GetExpenses(Intent):
                                                      "summed", "totalt",
                                                      "totala", "total"))
     show_most_recent_expense = BoolEntityField(message_contains=("senaste",))
-    month = TextEntityField(valid_strings=Month.names_as_list)
+    month = TextEntityField(valid_strings=Month.names_as_list, default=None)
     username_for_query = TextEntityField(
         valid_strings=SharedFinancesCalculator.enrolled_usernames)
 
@@ -84,12 +82,7 @@ class CalculateSplitExpenses(Intent):
     month = StringEntityField(valid_strings=Month.names_as_list)
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
-        try:
-            return self.ability.calculate_split_expenses(message)
-        except TypeError:
-            return Reply("Det gick inte att utföra uträkningen eftersom "
-                         "det finns användare som saknar angiven "
-                         "månadsinkomst.")
+        return self.ability.calculate_split_expenses(message)
 
 
 class EnterMonthlyIncome(Intent):
@@ -195,3 +188,21 @@ class UndoLastClosingCalculatedExpense(Intent):
         if deleted_entry is None:
             return Reply("Det fanns ingen kontering att radera.")
         return Reply(f"Konteringen från {deleted_entry.created} har raderats.")
+
+
+class UndoLastExpense(Intent):
+    """
+    An intent to delete the most recent expense.
+    """
+    help_string = __doc__
+    lead = ("radera", "ta bort", "ångra")
+    trail = ("utgift", "utgiften")
+
+    def respond(self, message: Message) -> Reply | ReplyStream:
+        deleted_expense = self.ability.delete_last_expense(message)
+        if deleted_expense is None:
+            return Reply("Det fanns ingen utgift att radera.")
+        stream = ReplyStream()
+        stream.put(Reply(f"Utgiften har raderats:"))
+        stream.put(deleted_expense)
+        return stream
