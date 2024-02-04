@@ -90,7 +90,8 @@ class SharedFinancesCalculator:
             calculation.expected_paid_amount_based_on_income = expected_paid_amount_based_on_income
             calculation.ingoing_compensation = ingoing_compensation
             calculation.outgoing_compensation = outgoing_compensation
-            calculation.quota_of_total = calculation.paid_amount / total_sum
+            if total_sum > 0:
+                calculation.quota_of_total = calculation.paid_amount / total_sum
             calculations.append(calculation)
         self.total_expense_sum = total_sum
         return calculations
