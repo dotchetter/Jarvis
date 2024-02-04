@@ -30,6 +30,17 @@ class ExpenseQuerySet(QuerySet):
         return self.filter(user_reference=user,
                            recurring_monthly=True)
 
+    def within_period(self,
+                      range_start: datetime,
+                      range_end: datetime,
+                      user: User = None) -> QuerySet:
+        """
+        Returns Expense instances for given user
+        """
+        return self.filter(user_reference=user,
+                           created__gte=range_start,
+                           created__lte=range_end)
+
 
 class Expense(me.Document):
     """
