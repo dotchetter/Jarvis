@@ -72,8 +72,8 @@ class SharedFinancesCalculator:
             calculation = self.SharedExpenseCalculation(user=user)
             paid_amount = Expense.objects.within_period(
                 user=user,
-                start_date=range_start,
-                end_date=range_end
+                range_start=range_start,
+                range_end=range_end
             ).sum("price")
 
             paid_amount = Decimal(paid_amount)
