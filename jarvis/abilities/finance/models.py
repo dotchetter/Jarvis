@@ -52,13 +52,15 @@ class Expense(me.Document):
     and tracks its name and price. Timestamp of purchase
     in the field 'created' defaults to time of instantiation.
     """
+    name = me.StringField(required=False)
     output_date_format = "%y-%m-%d %H:%M"
     expense_name = me.StringField(required=True, max_length=200)
     user_reference = me.ReferenceField(User, required=True)
     price = me.IntField(required=True, min_value=0)
-    created = me.DateTimeField(default=lambda: datetime.now())
-    account_for = me.DateField(default=lambda: datetime.now())
-    name = me.StringField(required=False)
+    created = me.DateTimeField(default=lambda: datetime.now(
+        tz=app.settings.TIME_ZONE))
+    account_for = me.DateField(default=lambda: datetime.now(
+        tz=app.settings.TIME_ZONE))
     recurring_monthly = me.BooleanField(default=False)
 
     meta = {"queryset_class": ExpenseQuerySet}
