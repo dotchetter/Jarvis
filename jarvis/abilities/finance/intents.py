@@ -195,3 +195,20 @@ class UndoLastClosingCalculatedExpense(Intent):
         if deleted_entry is None:
             return Reply("Det fanns ingen kontering att radera.")
         return Reply(f"Konteringen från {deleted_entry.created} har raderats.")
+
+class UndoLastExpense(Intent):
+    """
+    An intent to delete the most recent expense.
+    """
+    help_string = __doc__
+    lead = ("radera", "ta bort", "ångra")
+    trail = ("utgift", "utgiften")
+
+    def respond(self, message: Message) -> Reply | ReplyStream:
+        deleted_expense = self.ability.delete_last_expense(message)
+        if deleted_expense is None:
+            return Reply("Det fanns ingen utgift att radera.")
+        stream = ReplyStream()
+        stream.put(Reply(f"Utgiften har raderats:"))
+        stream.put(deleted_expense)
+        return stream
