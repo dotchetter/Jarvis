@@ -83,6 +83,7 @@ class FinanceAbility(Ability):
         username_for_query = extract_username(message, "username_for_query")
         get_latest = message.entities["show_most_recent_expense"]
         last_accounting_entry_date = self._get_last_accounting_entry_date()
+        stream = ReplyStream()
 
         try:
             user = User.objects.from_username_or_alias(username_for_query)
@@ -94,20 +95,22 @@ class FinanceAbility(Ability):
             latest_expense = Expense.objects.latest(user=user)
             return Reply(latest_expense)
 
-        expenses = Expense.objects.within_period(user=user)
+        expenses = Expense.objects.within_period(
+            range_start=last_accounting_entry_date,
+            user=user)
 
         if not expenses:
             return Reply(
                 self.storage["default_replies"]["no_expenses_matched"])
 
-        # The user wanted a sum of their expenses
-        month_name: str = Month(
-            expenses.first().created.month).name.capitalize()
-
         if message.entities.get("sum_expenses"):
             expenses_sum = expenses.sum("price")
+            period_str = (f"{last_accounting_entry_date.strftime('%Y-%m-%d')} - "
+                          f"{datetime.now().strftime('%Y-%m-%d')}")
+            stream.put(f"Nuvarande konteringsperiod: {period_str}")
             return Reply(f"Summan för {user.username.capitalize()} "
-                         f"i {month_name} är hittills: **{expenses_sum}**:-")
+                         f"under denna konteringsperiod är hittills: "
+                         f"**{expenses_sum}**:-")
         return ReplyStream(expenses)
 
     @classmethod
@@ -294,6 +297,9 @@ class FinanceAbility(Ability):
         accounting_entry = AccountingEntry()
         dt_fmt = pyttman.app.settings.DATETIME_FORMAT
         reply_stream.put(f"Konteringsunderlag: {datetime.now().strftime(dt_fmt)}")
+        period = f"{query_range_start.strftime('%Y-%m-%d')} - " \
+                 f"{datetime.now().strftime('%Y-%m-%d')}"
+        reply_stream.put(f"Konteringsperiod: {period}")
 
         while calculations:
             calculation = calculations.pop()
