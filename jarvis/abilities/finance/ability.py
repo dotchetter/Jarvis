@@ -300,9 +300,12 @@ class FinanceAbility(Ability):
         period = f"{query_range_start.strftime('%Y-%m-%d')} - " \
                  f"{datetime.now().strftime('%Y-%m-%d')}"
         reply_stream.put(f"Konteringsperiod: {period}")
-
+        msg = f"**Konteringsperiod: {period}**\n"
+        valid = False
         while calculations:
             calculation = calculations.pop()
+            if not calculation.quota_of_total:
+                continue
             username = calculation.user.username.capitalize()
             accounting_entry.participants.append(calculation.user)
 
@@ -325,12 +328,17 @@ class FinanceAbility(Ability):
                 msg += f"{username} har betalat exakt sin kvot och ska varken " \
                        f"kompenseras eller kompensera andra."
 
+            valid = True
             reply_stream.put(msg)
 
-            accounting_entry.accounting_result = msg
-            if message.entities["close_current_period"]:
-                accounting_entry.save()
-                reply_stream.put("Innevarande månad har stängts.")
+        accounting_entry.accounting_result = msg
+        if not valid:
+            return Reply("Det finns inga utgifter att kontera för, sedan förra konteringen: "
+                        f"{query_range_start.strftime('%Y-%m-%d %H:%M')}")
+        if message.entities["close_current_period"]:
+            accounting_entry.save()
+            reply_stream.put("Kontering sparad. Utgifter som läggs till från och med nu "
+                             "kommer ingå i ett nytt resultat.")
         return reply_stream
 
     @staticmethod

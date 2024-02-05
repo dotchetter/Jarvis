@@ -126,4 +126,4 @@ class AccountingEntry(me.Document):
     """
     participants: list[User] = me.ListField(me.ReferenceField(User, required=True))
     accounting_result: str = me.StringField(required=True)
-    created = me.DateField(default=datetime.now())
+    created = me.DateTimeField(default=datetime.now())
