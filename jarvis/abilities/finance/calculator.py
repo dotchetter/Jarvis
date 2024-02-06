@@ -18,6 +18,7 @@ class SharedFinancesCalculator:
     The resulting data describes who has to compensate whom, and
     by how much, respectively.
     """
+
     def __init__(self):
         self.total_expense_sum: Decimal = Decimal(0)
 
@@ -30,6 +31,7 @@ class SharedFinancesCalculator:
         outgoing_compensation: Decimal = field(default=None)
         ingoing_compensation: Decimal = field(default=None)
         quota_of_total: Decimal = field(default=None)
+        recurring_expenses: Decimal = field(default=None)
 
     @classmethod
     def enrolled_usernames(cls):
@@ -56,6 +58,9 @@ class SharedFinancesCalculator:
         calculations, processed = [], []
         total_sum = Decimal(
             Expense.objects.within_period(range_start, range_end).sum("price"))
+        total_sum += Decimal(
+            Expense.objects.recurring().sum("price")
+        )
 
         # Get the total combined income of all participants.
         try:
@@ -70,13 +75,15 @@ class SharedFinancesCalculator:
         for user in participant_users:
             ingoing_compensation = outgoing_compensation = Decimal(0)
             calculation = self.SharedExpenseCalculation(user=user)
-            paid_amount = Expense.objects.within_period(
+            normal_expenses = Expense.objects.within_period(
                 user=user,
                 range_start=range_start,
                 range_end=range_end
             ).sum("price")
-
-            paid_amount = Decimal(paid_amount)
+            recurring_expenses = Expense.objects.recurring(
+                user=user
+            ).sum("price")
+            paid_amount = Decimal(normal_expenses + recurring_expenses)
             income_quotient = user.profile.gross_income / combined_income
             expected_paid_amount_based_on_income = total_sum * income_quotient
 
@@ -90,8 +97,11 @@ class SharedFinancesCalculator:
             calculation.expected_paid_amount_based_on_income = expected_paid_amount_based_on_income
             calculation.ingoing_compensation = ingoing_compensation
             calculation.outgoing_compensation = outgoing_compensation
+            calculation.recurring_expenses = recurring_expenses
             if total_sum > 0:
                 calculation.quota_of_total = calculation.paid_amount / total_sum
+            else:
+                calculation.quota_of_total = Decimal(0)
             calculations.append(calculation)
         self.total_expense_sum = total_sum
         return calculations

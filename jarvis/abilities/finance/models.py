@@ -31,8 +31,10 @@ class ExpenseQuerySet(QuerySet):
         :param user: User owning the Expense documents
         :return: QuerySet[Expense]
         """
-        return self.filter(user_reference=user,
-                           recurring_monthly=True)
+        query = self.filter(recurring_monthly=True)
+        if user is not None:
+            query = query.filter(user_reference=user)
+        return query
 
     def within_period(self,
                       range_start: datetime,
@@ -44,7 +46,8 @@ class ExpenseQuerySet(QuerySet):
         if range_end is None:
             range_end = datetime.now() + timedelta(days=1)
         query = self.filter(created__gte=range_start,
-                            created__lte=range_end)
+                            created__lte=range_end,
+                            recurring_monthly=False)
         if user is not None:
             query = query.filter(user_reference=user)
         return query
@@ -84,7 +87,10 @@ class Expense(me.Document):
         account_month = f":calendar: **{account_month} {year}**\n"
         created_date = self.created.strftime(self.output_date_format)
         created_date = f":clock: **{created_date}**\n"
-        return name + price + created_date + account_month + sep
+        recurring = ""
+        if self.recurring_monthly:
+            recurring = ":repeat: **Upprepande**\n"
+        return name + price + created_date + account_month + recurring + sep
 
 
 class Debt(me.Document):
