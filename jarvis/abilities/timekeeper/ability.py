@@ -52,13 +52,14 @@ class TimeKeeper(Ability):
         from_timestamp = message.entities["from_timestamp"]
         to_timestamp = message.entities["to_timestamp"]
         project_name = message.entities["project_name"]
+        until_now = message.entities["until_now"]
 
         if (project := Project.objects.get_by_name_or_default_project(
                 project_name)) is None:
             return self.complain_no_project_was_chosen()
 
         workshifts_entered_as_datetime = from_datetime and to_datetime
-        workshifts_entered_as_time = from_timestamp and to_timestamp
+        workshifts_entered_as_time = from_timestamp and (to_timestamp or until_now)
 
         if not (workshifts_entered_as_datetime or workshifts_entered_as_time):
             return Reply("Ange när arbetspasset började och slutade. "
@@ -73,12 +74,14 @@ class TimeKeeper(Ability):
             dt_format = app.settings.TIMESTAMP_FORMAT
             start_datetime = end_datetime = datetime.now()
             timestamp_start = datetime.strptime(from_timestamp, dt_format)
-            timestamp_end = datetime.strptime(to_timestamp, dt_format)
-
             start_datetime = start_datetime.replace(hour=timestamp_start.hour,
                                                     minute=timestamp_start.minute)
-            end_datetime = end_datetime.replace(hour=timestamp_end.hour,
-                                                minute=timestamp_end.minute)
+            if until_now:
+                end_datetime = datetime.now()
+            else:
+                timestamp_end = datetime.strptime(to_timestamp, dt_format)
+                end_datetime = end_datetime.replace(hour=timestamp_end.hour,
+                                                    minute=timestamp_end.minute)
 
         try:
             if start_datetime > end_datetime:

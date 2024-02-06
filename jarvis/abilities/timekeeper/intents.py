@@ -90,6 +90,7 @@ class CreateWorkShiftFromString(Intent):
     from_timestamp = StringEntityField(identifier=TimeStampIdentifier)
     to_timestamp = StringEntityField(identifier=TimeStampIdentifier)
     project_name = StringEntityField(valid_strings=Project.all_project_names)
+    until_now = BoolEntityField(message_contains=("nu",))
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         return self.ability.save_workshift_from_string(message)

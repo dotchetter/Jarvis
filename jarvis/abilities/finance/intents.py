@@ -21,6 +21,9 @@ class AddExpense(Intent):
     expense_value = IntEntityField()
     store_for_username = TextEntityField(valid_strings=SharedFinancesCalculator
                                          .enrolled_usernames)
+    recurring = BoolEntityField(
+        message_contains=("återkommande", "upprepande",
+                          "upprepad", "repeterande"))
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
         return self.ability.add_expense(message)
@@ -53,6 +56,9 @@ class GetExpenses(Intent):
     month = TextEntityField(valid_strings=Month.names_as_list, default=None)
     username_for_query = TextEntityField(
         valid_strings=SharedFinancesCalculator.enrolled_usernames)
+    recurring_expenses_only = BoolEntityField(
+        message_contains=("återkommande", "upprepande",
+                          "upprepad", "repeterande"))
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
         """

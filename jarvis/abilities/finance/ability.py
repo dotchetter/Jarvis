@@ -43,13 +43,13 @@ class FinanceAbility(Ability):
                          {"no_expenses_matched": "Det finns inga utgifter "
                                                  "sparade med angivna "
                                                  "kriterier",
-                          "no_users_matches":    "Jag hittade ingen "
-                                                 "användare som matchade. "
-                                                 "Om du angav ett namn, "
-                                                 "kontrollera stavningen. "
-                                                 "Om du inte angav något, "
-                                                 "kontrollera att du är "
-                                                 "registrerad."})
+                          "no_users_matches": "Jag hittade ingen "
+                                              "användare som matchade. "
+                                              "Om du angav ett namn, "
+                                              "kontrollera stavningen. "
+                                              "Om du inte angav något, "
+                                              "kontrollera att du är "
+                                              "registrerad."})
 
     def add_expense(self, message: Message):
         """
@@ -59,6 +59,7 @@ class FinanceAbility(Ability):
         expense_name = message.entities.get("expense_name")
         expense_value = message.entities.get("expense_value")
         store_for_username = extract_username(message, "store_for_username")
+        recurring = message.entities.get("recurring")
 
         if not expense_value and expense_name:
             return Reply("Du måste ange både namn och "
@@ -71,8 +72,11 @@ class FinanceAbility(Ability):
 
         expense = Expense.objects.create(price=expense_value,
                                          expense_name=expense_name,
-                                         user_reference=user)
-        stream.put(f"Utgiften sparades för {user.username.capitalize()}. ")
+                                         user_reference=user,
+                                         recurring_monthly=recurring)
+        stream.put(f"Utgiften sparades för {user.username.capitalize()}.")
+        if recurring:
+            stream.put("Utgiften är markerad som återkommande.")
         stream.put(expense)
         return stream
 
@@ -83,6 +87,7 @@ class FinanceAbility(Ability):
         username_for_query = extract_username(message, "username_for_query")
         get_latest = message.entities["show_most_recent_expense"]
         last_accounting_entry_date = self._get_last_accounting_entry_date()
+        recurring_expenses_only = message.entities["recurring_expenses_only"]
         stream = ReplyStream()
 
         try:
@@ -92,25 +97,32 @@ class FinanceAbility(Ability):
             return Reply(self.storage["default_replies"]["no_users_matches"])
 
         if get_latest:
-            latest_expense = Expense.objects.latest(user=user)
-            return Reply(latest_expense)
+            return Reply(Expense.objects.latest(user=user))
+        if recurring_expenses_only:
+            return ReplyStream(Expense.objects.recurring(user=user))
 
         expenses = Expense.objects.within_period(
             range_start=last_accounting_entry_date,
             user=user)
+        recurring_expenses_only = Expense.objects.recurring(user=user)
 
-        if not expenses:
-            return Reply(
-                self.storage["default_replies"]["no_expenses_matched"])
+        if not expenses and not recurring_expenses_only:
+            return Reply(self.storage["default_replies"]["no_expenses_matched"])
 
         if message.entities.get("sum_expenses"):
             expenses_sum = expenses.sum("price")
+            recurring_sum = recurring_expenses_only.sum("price")
             period_str = (f"{last_accounting_entry_date.strftime('%Y-%m-%d')} - "
                           f"{datetime.now().strftime('%Y-%m-%d')}")
             stream.put(f"Nuvarande konteringsperiod: {period_str}")
             return Reply(f"Summan för {user.username.capitalize()} "
                          f"under denna konteringsperiod är hittills: "
-                         f"**{expenses_sum}**:-")
+                         f"**{expenses_sum + recurring_sum}**:-.\n"
+                         f"Varav återkommande utgifter: **{recurring_sum}**:-\n"
+                         f"Varav engångsutgifter: **{expenses_sum}**:-")
+
+        expenses = list(expenses.all())
+        expenses.extend(recurring_expenses_only.all())
         return ReplyStream(expenses)
 
     @classmethod
@@ -296,36 +308,34 @@ class FinanceAbility(Ability):
         reply_stream = ReplyStream()
         accounting_entry = AccountingEntry()
         dt_fmt = pyttman.app.settings.DATETIME_FORMAT
-        reply_stream.put(f"Konteringsunderlag: {datetime.now().strftime(dt_fmt)}")
-        period = f"{query_range_start.strftime('%Y-%m-%d')} - " \
-                 f"{datetime.now().strftime('%Y-%m-%d')}"
+        reply_stream.put(f"**Konteringsunderlag**: {datetime.now().strftime(dt_fmt)}")
+        period = f"**{query_range_start.strftime('%Y-%m-%d')} - " \
+                 f"{datetime.now().strftime('%Y-%m-%d')}**"
         reply_stream.put(f"Konteringsperiod: {period}")
         msg = f"**Konteringsperiod: {period}**\n"
         valid = False
         while calculations:
             calculation = calculations.pop()
-            if not calculation.quota_of_total:
-                continue
             username = calculation.user.username.capitalize()
             accounting_entry.participants.append(calculation.user)
 
-            msg = f"**{username}**:\n"
-            msg += f"{username} har betalat {calculation.paid_amount:.2f}:- " \
-                   f"denna period vilket utgör {calculation.quota_of_total * 100:.2f}% av " \
-                   f"det totala beloppet {calculator.total_expense_sum:.2f}:-.\n"
-            msg += f"{username} har en månadslön som motsvarar " \
-                   f"{calculation.income_quotient * 100:.2f}:- av den " \
+            msg = f"\n:moneybag: **{username}:**\n"
+            msg += f"**Summa:** {calculation.paid_amount:.2f}:- \n" \
+                   f"**Belastning:** {calculation.quota_of_total * 100:.2f}% av " \
+                   f"totalen {calculator.total_expense_sum:.2f}:-.\n"
+            if calculation.recurring_expenses:
+                msg += f"**Varav återkommande utgifter:** {calculation.recurring_expenses:.2f}:- \n"
+
+            msg += f"**Månadslön:** {calculation.income_quotient * 100:.2f}% av den " \
                    f"totala inkomsten av deltagarna.\n"
 
             if calculation.ingoing_compensation:
-                msg += f"{username} har överbetalat sin del och ska bli kompenserad " \
-                       f"med {calculation.ingoing_compensation:.2f}:- från övriga " \
+                msg += f"**Ska kompenseras med:** {calculation.ingoing_compensation:.2f}:- från övriga " \
                        f"deltagare."
             elif calculation.outgoing_compensation:
-                msg += f"{username} har inte betalat sin del och ska kompensera " \
-                       f"övriga deltagare med {calculation.outgoing_compensation:.2f}:- "
+                msg += f"**Ska kompensera andra med** {calculation.outgoing_compensation:.2f}:-"
             else:
-                msg += f"{username} har betalat exakt sin kvot och ska varken " \
+                msg += f"**{username} har betalat exakt sin kvot och ska varken " \
                        f"kompenseras eller kompensera andra."
 
             valid = True
@@ -334,7 +344,7 @@ class FinanceAbility(Ability):
         accounting_entry.accounting_result = msg
         if not valid:
             return Reply("Det finns inga utgifter att kontera för, sedan förra konteringen: "
-                        f"{query_range_start.strftime('%Y-%m-%d %H:%M')}")
+                         f"{query_range_start.strftime('%Y-%m-%d %H:%M')}")
         if message.entities["close_current_period"]:
             accounting_entry.save()
             reply_stream.put("Kontering sparad. Utgifter som läggs till från och med nu "
