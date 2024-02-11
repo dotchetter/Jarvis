@@ -77,12 +77,14 @@ class TimeKeeper(Ability):
             start_datetime = start_datetime.replace(hour=timestamp_start.hour,
                                                     minute=timestamp_start.minute)
             if until_now:
-                end_datetime = datetime.now()
+                end_datetime = datetime.now(tz=app.settings.TIME_ZONE)
             else:
                 timestamp_end = datetime.strptime(to_timestamp, dt_format)
                 end_datetime = end_datetime.replace(hour=timestamp_end.hour,
                                                     minute=timestamp_end.minute)
 
+        start_datetime = start_datetime.replace(tzinfo=app.settings.TIME_ZONE)
+        end_datetime = end_datetime.replace(tzinfo=app.settings.TIME_ZONE)
         try:
             if start_datetime > end_datetime:
                 return Reply("Felaktigt inmatade värden: Passet kan inte "
