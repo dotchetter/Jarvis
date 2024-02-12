@@ -68,7 +68,7 @@ LOG_FILE_DIR = APP_BASE_DIR / Path("logs")
 LOG_TO_STDOUT = True
 
 APP_NAME = "jarvis"
-APP_VERSION = "1.9.3"
+APP_VERSION = "1.9.4"
 DATETIME_FORMAT = "%Y-%m-%d-%H:%M"
 TIMESTAMP_FORMAT = "%H:%M"
 
