@@ -5,7 +5,6 @@ Recipes feature of the application.
 """
 
 from pyttman.core.ability import Ability
-from jarvis.abilities.administrative.intents import *
 from jarvis.abilities.recipes.intents import AddRecipe, GetRecipes
 
 
