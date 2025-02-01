@@ -98,7 +98,7 @@ class CreateWorkShiftFromString(Intent):
 
 class CreateNewProject(Intent):
     """
-    Create a new Project, to store workshifts for
+    Create a new Project, to store work shifts for
     """
     project_name = StringEntityField(span=5)
     hourly_rate = IntEntityField()
@@ -146,3 +146,21 @@ class DeactivateProject(Intent):
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         return self.ability.deactivate_project(message)
+
+
+class ListProjects(Intent):
+    """
+    List all projects in Jarvis
+    """
+    lead = ("visa", "lista", "hämta")
+    trail = ("projekt",)
+
+    def respond(self, message: Message) -> Reply | ReplyStream:
+        reply = ReplyStream()
+        for project in Project.objects.all():
+            description = (f"**Namn:** {project.name}\n"
+                           f"**Arvode:** {project.hourly_rate} kr/h\n"
+                           f"**Aktiv:** {'Ja' if project.is_active else 'Nej'}")
+            reply.put(Reply(description))
+        return reply
+
