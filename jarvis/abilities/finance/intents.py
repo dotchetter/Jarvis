@@ -85,7 +85,8 @@ class CalculateSplitExpenses(Intent):
                   "ska ha betalat lika mycket."
 
     close_current_period = BoolEntityField(message_contains=("stäng", "lås"))
-    month = StringEntityField(valid_strings=Month.names_as_list)
+    period_start = StringEntityField(prefixes=("från", "from"))
+    period_end = StringEntityField(prefixes=("till", "to"))
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
         return self.ability.calculate_split_expenses(message)
