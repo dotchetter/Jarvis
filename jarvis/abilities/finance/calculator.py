@@ -49,7 +49,7 @@ class SharedFinancesCalculator:
                         participant_users: Iterable[User],
                         range_start: datetime,
                         range_end: datetime = None,
-                        ) -> Collection[SharedExpenseCalculation]:
+                        ) -> list[SharedExpenseCalculation]:
         """
         Calculates the share of the total cost for each individual
         user taking part in the shared finances. Their gross

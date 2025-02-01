@@ -78,7 +78,7 @@ class CalculateSplitExpenses(Intent):
     """
     lead = ("kontera",)
     example = "Kontera utgifter"
-    description = "Beräkna ugfiter för alla användare för " \
+    description = "Beräkna utgifter för alla användare för " \
                   "nuvarande period. I rapporten framgår " \
                   "om vissa har betalat mer, och hur mycket " \
                   "dessa ska kompenseras med för att alla " \

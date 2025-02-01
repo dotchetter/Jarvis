@@ -86,7 +86,7 @@ class FinanceAbility(Ability):
         """
         username_for_query = extract_username(message, "username_for_query")
         get_latest = message.entities["show_most_recent_expense"]
-        last_accounting_entry_date = self._get_last_accounting_entry_date()
+        last_accounting_entry_date = self._get_last_accounting_entry_datetime()
         recurring_expenses_only = message.entities["recurring_expenses_only"]
         stream = ReplyStream()
 
@@ -296,12 +296,35 @@ class FinanceAbility(Ability):
         participant_users = calculator.get_enrolled_users()
 
         # If there's an accounting entry, use that as the start date for the expenses to get
-        query_range_start = self._get_last_accounting_entry_date()
+        datetime_format = pyttman.app.settings.DATETIME_FORMAT
+        date_format = pyttman.app.settings.DATE_FORMAT
+        period_start, period_end = None, None
+
+        for dt_format in (datetime_format, date_format):
+            try:
+                if (period_start := message.entities["period_start"]) is not None:
+                    period_start = datetime.strptime(period_start, dt_format)
+                else:
+                    period_start = self._get_last_accounting_entry_datetime()
+
+                if (period_end := message.entities["period_end"]) is not None:
+                    period_end = datetime.strptime(period_end, dt_format)
+                else:
+                    period_end = datetime.utcnow()
+            except ValueError:
+                continue
+            else:
+                break
+
+        if None in (period_start, period_end):
+            return Reply("Jag förstår inte vilken period du vill kontera för. "
+                         "Ange start- och slutdatum för perioden.")
 
         try:
             calculations = calculator.calculate_split(
                 participant_users=participant_users,
-                range_start=query_range_start)
+                range_start=period_start,
+                range_end=period_end)
         except ValueError:
             return Reply("Åtminstone en användare har inte angivit månadsinkomst.")
 
@@ -309,11 +332,12 @@ class FinanceAbility(Ability):
         accounting_entry = AccountingEntry()
         dt_fmt = pyttman.app.settings.DATETIME_FORMAT
         reply_stream.put(f"**Konteringsunderlag**: {datetime.now().strftime(dt_fmt)}")
-        period = f"**{query_range_start.strftime('%Y-%m-%d')} - " \
-                 f"{datetime.now().strftime('%Y-%m-%d')}**"
+        period = f"**{period_start.strftime('%Y-%m-%d')} - " \
+                 f"{period_end.strftime('%Y-%m-%d')}**"
         reply_stream.put(f"Konteringsperiod: {period}")
         msg = f"**Konteringsperiod: {period}**\n"
         valid = False
+
         while calculations:
             calculation = calculations.pop()
             username = calculation.user.username.capitalize()
@@ -344,7 +368,7 @@ class FinanceAbility(Ability):
         accounting_entry.accounting_result = msg
         if not valid:
             return Reply("Det finns inga utgifter att kontera för, sedan förra konteringen: "
-                         f"{query_range_start.strftime('%Y-%m-%d %H:%M')}")
+                         f"{period_start.strftime('%Y-%m-%d %H:%M')}")
         if message.entities["close_current_period"]:
             accounting_entry.save()
             reply_stream.put("Kontering sparad. Utgifter som läggs till från och med nu "
@@ -352,11 +376,12 @@ class FinanceAbility(Ability):
         return reply_stream
 
     @staticmethod
-    def _get_last_accounting_entry_date() -> datetime | None:
+    def _get_last_accounting_entry_datetime() -> datetime | None:
         """
         Get the date of the last accounting entry. If there's no entry, return None.
         """
         if last_account_entry := AccountingEntry.objects.order_by('-created').first():
+            print("Returning: ", last_account_entry.created)
             return last_account_entry.created
         return None
 
