@@ -47,6 +47,7 @@ class GetExpenses(Intent):
                   "ange deras namn."
     example = "Visa utgifter för Simon"
 
+    limit = IntEntityField()
     sum_expenses = BoolEntityField(message_contains=("sum", "summa",
                                                      "summera",
                                                      "summerade",

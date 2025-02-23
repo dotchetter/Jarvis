@@ -122,7 +122,10 @@ class FinanceAbility(Ability):
                          f"Varav engångsutgifter: **{expenses_sum}**:-")
 
         expenses = list(expenses.all())
-        expenses.extend(recurring_expenses_only.all())
+        if message.entities.get("limit"):
+            expenses = expenses[len(expenses) - message.entities["limit"]:]
+        else:
+            expenses.extend(recurring_expenses_only.all())
         return ReplyStream(expenses)
 
     @classmethod
