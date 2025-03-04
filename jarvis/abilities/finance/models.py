@@ -65,12 +65,9 @@ class Expense(me.Document):
     expense_name = me.StringField(required=True, max_length=200)
     user_reference = me.ReferenceField(User, required=True)
     price = me.IntField(required=True, min_value=0)
-    created = me.DateTimeField(default=lambda: datetime.now(
-        tz=app.settings.TIME_ZONE))
-    account_for = me.DateField(default=lambda: datetime.now(
-        tz=app.settings.TIME_ZONE))
+    created = me.DateTimeField(default=lambda: datetime.utcnow())
+    account_for = me.DateField(default=lambda: datetime.utcnow())
     recurring_monthly = me.BooleanField(default=False)
-
     meta = {"queryset_class": ExpenseQuerySet}
 
     def __str__(self):
@@ -132,4 +129,4 @@ class AccountingEntry(me.Document):
     """
     participants: list[User] = me.ListField(me.ReferenceField(User, required=True))
     accounting_result: str = me.StringField(required=True)
-    created = me.DateTimeField(default=datetime.now())
+    created = me.DateTimeField(default=lambda: datetime.utcnow())

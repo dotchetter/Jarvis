@@ -68,8 +68,9 @@ LOG_FILE_DIR = APP_BASE_DIR / Path("logs")
 LOG_TO_STDOUT = True
 
 APP_NAME = "jarvis"
-APP_VERSION = "1.9.3"
+APP_VERSION = "1.9.6"
 DATETIME_FORMAT = "%Y-%m-%d-%H:%M"
+DATE_FORMAT = "%Y-%m-%d"
 TIMESTAMP_FORMAT = "%H:%M"
 
 TIME_ZONE = datetime.utcnow().astimezone().tzinfo

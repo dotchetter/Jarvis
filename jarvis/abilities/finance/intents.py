@@ -47,6 +47,7 @@ class GetExpenses(Intent):
                   "ange deras namn."
     example = "Visa utgifter för Simon"
 
+    limit = IntEntityField()
     sum_expenses = BoolEntityField(message_contains=("sum", "summa",
                                                      "summera",
                                                      "summerade",
@@ -78,14 +79,15 @@ class CalculateSplitExpenses(Intent):
     """
     lead = ("kontera",)
     example = "Kontera utgifter"
-    description = "Beräkna ugfiter för alla användare för " \
+    description = "Beräkna utgifter för alla användare för " \
                   "nuvarande period. I rapporten framgår " \
                   "om vissa har betalat mer, och hur mycket " \
                   "dessa ska kompenseras med för att alla " \
                   "ska ha betalat lika mycket."
 
     close_current_period = BoolEntityField(message_contains=("stäng", "lås"))
-    month = StringEntityField(valid_strings=Month.names_as_list)
+    period_start = StringEntityField(prefixes=("från", "from"))
+    period_end = StringEntityField(prefixes=("till", "to"))
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
         return self.ability.calculate_split_expenses(message)

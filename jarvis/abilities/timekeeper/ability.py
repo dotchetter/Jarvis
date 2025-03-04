@@ -14,14 +14,16 @@ from jarvis.models import User
 
 
 class TimeKeeper(Ability):
-    intents = (intents.CreateWorkShift,
-               intents.StopWorkShift,
-               intents.GetWorkShift,
-               intents.CreateWorkShiftFromString,
-               intents.CreateNewProject,
-               intents.SetProjectAsDefault,
-               intents.ActivateProject,
-               intents.DeactivateProject)
+    intents = (
+        intents.CreateWorkShift,
+        intents.StopWorkShift,
+        intents.GetWorkShift,
+        intents.CreateWorkShiftFromString,
+        intents.CreateNewProject,
+        intents.SetProjectAsDefault,
+        intents.ActivateProject,
+        intents.DeactivateProject,
+        intents.ListProjects)
 
     @staticmethod
     def get_total_billable_hours(*workshifts: Sequence[WorkShift]) -> Decimal:

@@ -44,9 +44,11 @@ class GetRecipes(Intent):
         if vendor:
             vendor = vendor.lower()
             query = Recipe.objects.filter(url__contains=vendor)
-        if keyword:
+        elif keyword:
             keyword = keyword.lower()
             query = query.filter(name__icontains=keyword)
+        else:
+            return ReplyStream(("Jag behöver veta vad du söker efter.",))
         if not (matching_recipes := query.all()):
             return Reply("Jag hittade inga recept med det namnet.")
         stream = ReplyStream()
