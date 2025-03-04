@@ -78,6 +78,19 @@ class FinanceAbility(Ability):
         if recurring:
             stream.put("Utgiften är markerad som återkommande.")
         stream.put(expense)
+
+        calculator = SharedFinancesCalculator()
+        enrolled_users = calculator.get_enrolled_users()
+
+        household_income = sum(user.profile.gross_income
+                               for user in enrolled_users)
+        expense_sum = calculator.calculate_split(
+            participant_users=calculator.get_enrolled_users(),
+            range_start=self._get_last_accounting_entry_datetime()
+        ).pop().paid_amount
+
+        budget_amount_left = max(0, int(household_income - expense_sum))
+        stream.put(f"Ni har {budget_amount_left}:- kvar av er inkomst för denna period.")
         return stream
 
     def get_expenses(self, message: Message):
@@ -384,7 +397,6 @@ class FinanceAbility(Ability):
         Get the date of the last accounting entry. If there's no entry, return None.
         """
         if last_account_entry := AccountingEntry.objects.order_by('-created').first():
-            print("Returning: ", last_account_entry.created)
             return last_account_entry.created
         return None
 
