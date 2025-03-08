@@ -21,9 +21,9 @@ class AddExpense(Intent):
     expense_value = IntEntityField()
     store_for_username = TextEntityField(valid_strings=SharedFinancesCalculator
                                          .enrolled_usernames)
-    recurring = BoolEntityField(
-        message_contains=("återkommande", "upprepande",
-                          "upprepad", "repeterande"))
+    private = BoolEntityField(message_contains=("egen", "privat"))
+    recurring = BoolEntityField(message_contains=("återkommande", "upprepande",
+                                                  "upprepad", "repeterande"))
 
     def respond(self, message: Message) -> Union[Reply, ReplyStream]:
         return self.ability.add_expense(message)
@@ -44,7 +44,8 @@ class GetExpenses(Intent):
              "expenses", "utlägg", "utgiften")
     description = "Hämta utgifter för dig, eller en annan person." \
                   "Om du vill visa utgifter för någon annan, kan du " \
-                  "ange deras namn."
+                  "ange deras namn. Om du vill se egna privata utgifter, " \
+                  "kan du ange 'privat', 'privata' för att filtrera resultatet."
     example = "Visa utgifter för Simon"
 
     limit = IntEntityField()
@@ -54,7 +55,8 @@ class GetExpenses(Intent):
                                                      "summed", "totalt",
                                                      "totala", "total"))
     show_most_recent_expense = BoolEntityField(message_contains=("senaste",))
-    month = TextEntityField(valid_strings=Month.names_as_list, default=None)
+    private_only = BoolEntityField(message_contains=("egna", "privata", "privat", "mina"))
+    shared_only = BoolEntityField(message_contains=("delade", "delad"))
     username_for_query = TextEntityField(
         valid_strings=SharedFinancesCalculator.enrolled_usernames)
     recurring_expenses_only = BoolEntityField(
