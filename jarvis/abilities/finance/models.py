@@ -96,7 +96,7 @@ class Expense(me.Document):
         account_month = f":calendar: **{account_month} {year}**\n"
         created_date = self.created.strftime(self.output_date_format)
         created_date = f":clock: **{created_date}**\n"
-        shared = "**Delad utgift :couple:**" if self.shared else f"**Privat utgift :artist:**"
+        shared = "**:couple: Delad utgift**" if self.shared else f"**:artist: Privat utgift**"
         recurring = ""
         if self.recurring_monthly:
             recurring = ":repeat: **Upprepande**\n"
