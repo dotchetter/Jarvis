@@ -60,6 +60,9 @@ class FinanceAbility(Ability):
         expense_value = message.entities.get("expense_value")
         store_for_username = extract_username(message, "store_for_username")
         recurring = message.entities.get("recurring")
+        private = message.entities.get("private")
+
+
 
         if not expense_value and expense_name:
             return Reply("Du måste ange både namn och "
@@ -73,12 +76,16 @@ class FinanceAbility(Ability):
         expense = Expense.objects.create(price=expense_value,
                                          expense_name=expense_name,
                                          user_reference=user,
-                                         recurring_monthly=recurring)
+                                         recurring_monthly=recurring,
+                                         shared=not private)
+
         stream.put(f"Utgiften sparades för {user.username.capitalize()}.")
         if recurring:
             stream.put("Utgiften är markerad som återkommande.")
-        stream.put(expense)
+        if private:
+            stream.put("Den har bokförts som en privat utgift bara för dig.")
 
+        stream.put(expense)
         calculator = SharedFinancesCalculator()
         enrolled_users = calculator.get_enrolled_users()
 
@@ -101,7 +108,16 @@ class FinanceAbility(Ability):
         get_latest = message.entities["show_most_recent_expense"]
         last_accounting_entry_date = self._get_last_accounting_entry_datetime()
         recurring_expenses_only = message.entities["recurring_expenses_only"]
+        shared_only = message.entities["shared_only"]
+        private_only = message.entities["private_only"]
         stream = ReplyStream()
+
+        if shared_only and private_only:
+            return Reply("Du kan inte välja både delade och privata utgifter samtidigt.")
+        if shared_only:
+            stream.put("Visar endast delade utgifter.")
+        if private_only:
+            stream.put("Visar endast privata utgifter.")
 
         try:
             user = User.objects.from_username_or_alias(username_for_query)
@@ -116,15 +132,18 @@ class FinanceAbility(Ability):
 
         expenses = Expense.objects.within_period(
             range_start=last_accounting_entry_date,
-            user=user)
-        recurring_expenses_only = Expense.objects.recurring(user=user)
+            user=user,
+            shared_only=shared_only,
+            private_only=private_only)
 
-        if not expenses and not recurring_expenses_only:
+        recurring_expenses = Expense.objects.recurring(user=user)
+
+        if not expenses and not recurring_expenses:
             return Reply(self.storage["default_replies"]["no_expenses_matched"])
 
         if message.entities.get("sum_expenses"):
             expenses_sum = expenses.sum("price")
-            recurring_sum = recurring_expenses_only.sum("price")
+            recurring_sum = recurring_expenses.sum("price")
             period_str = (f"{last_accounting_entry_date.strftime('%Y-%m-%d')} - "
                           f"{datetime.now().strftime('%Y-%m-%d')}")
             stream.put(f"Nuvarande konteringsperiod: {period_str}")
@@ -138,7 +157,8 @@ class FinanceAbility(Ability):
         if message.entities.get("limit"):
             expenses = expenses[len(expenses) - message.entities["limit"]:]
         else:
-            expenses.extend(recurring_expenses_only.all())
+            if not private_only:
+                expenses.extend(recurring_expenses.all())
         return ReplyStream(expenses)
 
     @classmethod

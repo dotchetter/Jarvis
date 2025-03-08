@@ -39,15 +39,26 @@ class ExpenseQuerySet(QuerySet):
     def within_period(self,
                       range_start: datetime,
                       range_end: datetime = None,
-                      user: User = None) -> QuerySet:
+                      user: User = None,
+                      shared_only: bool = False,
+                      private_only: bool = False) -> QuerySet:
         """
         Returns Expense instances for given user
         """
+        if shared_only and private_only:
+            raise ValueError("Cannot filter for both shared and private expenses.")
+
         if range_end is None:
             range_end = datetime.now() + timedelta(days=1)
+
         query = self.filter(created__gte=range_start,
                             created__lte=range_end,
                             recurring_monthly=False)
+        if shared_only:
+            query = query.filter(shared=True)
+        elif private_only:
+            query = query.filter(shared=False)
+
         if user is not None:
             query = query.filter(user_reference=user)
         return query
@@ -68,6 +79,7 @@ class Expense(me.Document):
     created = me.DateTimeField(default=lambda: datetime.utcnow())
     account_for = me.DateField(default=lambda: datetime.utcnow())
     recurring_monthly = me.BooleanField(default=False)
+    shared = me.BooleanField(default=True)
     meta = {"queryset_class": ExpenseQuerySet}
 
     def __str__(self):
@@ -84,10 +96,11 @@ class Expense(me.Document):
         account_month = f":calendar: **{account_month} {year}**\n"
         created_date = self.created.strftime(self.output_date_format)
         created_date = f":clock: **{created_date}**\n"
+        shared = "**Delad utgift :couple:**" if self.shared else f"**Privat utgift :artist:**"
         recurring = ""
         if self.recurring_monthly:
             recurring = ":repeat: **Upprepande**\n"
-        return name + price + created_date + account_month + recurring + sep
+        return name + price + created_date + account_month + recurring + shared + sep
 
 
 class Debt(me.Document):

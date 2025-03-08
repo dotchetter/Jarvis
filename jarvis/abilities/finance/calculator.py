@@ -56,11 +56,15 @@ class SharedFinancesCalculator:
         salary is taken in to consideration when calculating.
         """
         calculations, processed = [], []
+        recurring_expenses_sum = Expense.objects.recurring().sum("price")
         total_sum = Decimal(
-            Expense.objects.within_period(range_start, range_end).sum("price"))
-        total_sum += Decimal(
-            Expense.objects.recurring().sum("price")
-        )
+            Expense.objects.within_period(
+                range_start,
+                range_end,
+                shared_only=True
+            ).sum("price"))
+
+        total_sum += recurring_expenses_sum
 
         # Get the total combined income of all participants.
         try:
