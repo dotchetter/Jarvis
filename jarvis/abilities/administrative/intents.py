@@ -12,27 +12,6 @@ from jarvis.models import User, Features
 from jarvis.abilities.finance.models import Expense
 
 
-class DevInfo(Intent):
-    """
-    Returns info about the environment which Jarvis is running in.
-    """
-    lead = ("berätta",)
-    trail = ("dig",)
-    example = "Berätta om dig"
-    description = "Visar information om mig, Jarvis!"
-
-    def respond(self, message: Message) -> Reply:
-
-        db = pyttman.settings.DATABASE["db"]
-        db_alias = "prod" if db == "jarvis" else "dev"
-        return Reply(f"Version: {pyttman.settings.APP_VERSION}\n"
-                     f"db: {db_alias}\n"
-                     f"Scheduler threads: "
-                     f"{len(list(pyttman.schedule.get_jobs()))}\n"
-                     f"Pyttman version: {pyttman.__version__}\n"
-                     f"Dev mode: {pyttman.settings.DEV_MODE}")
-
-
 class UserInfo(Intent):
     """
     Returns info about the user writing the question
