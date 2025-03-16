@@ -1,5 +1,5 @@
 #Create a ubuntu base image with python 3 installed.
-FROM python:3.11
+FROM python:3.12
 
 #Set the working directory
 WORKDIR /
