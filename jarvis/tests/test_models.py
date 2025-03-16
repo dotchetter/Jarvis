@@ -12,14 +12,6 @@ from jarvis.models import User
 class TestExpenseModel(TestCase):
     load_dotenv()
 
-    mongoengine.connect(**{
-        "tlsCAFile": certifi.where(),
-        "db": os.getenv("MONGO_DB_NAME_DEV"),
-        "host": os.getenv("MONGO_DB_URL"),
-        "username": os.getenv("MONGO_DB_USER"),
-        "password": os.getenv("MONGO_DB_PASSWORD"),
-        "port": int(os.getenv("MONGO_DB_PORT"))})
-
     def setUp(self):
         self.mock_alias = "anonymous"
         self.user = User.objects.first()
