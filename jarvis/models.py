@@ -1,4 +1,5 @@
 import enum
+from datetime import datetime, UTC
 from decimal import Decimal
 import mongoengine as me
 from mongoengine import QuerySet
@@ -98,3 +99,11 @@ class User(me.Document):
         if self._profile is None:
             self._profile = UserProfile()
         return self._profile
+
+class RAGMemory(me.Document):
+    """
+    This model is used to store memories for LLM RAG.
+    """
+    author_key = me.StringField()
+    memory = me.StringField()
+    created = me.DateTimeField(default=lambda: datetime.now(tz=UTC))
