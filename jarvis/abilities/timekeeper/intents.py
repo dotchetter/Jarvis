@@ -20,15 +20,15 @@ class CreateWorkShift(Intent):
     def respond(self, message: Message) -> Reply | ReplyStream:
         project_name = message.entities["project_name"]
 
-        if (current_user := User.objects.from_message(message)) is None:
+        if message.user is None:
             return Reply("Jag vet inte vem frågan gäller?")
-        if complaint := self.complain_if_workshift_exists(current_user):
+        if complaint := self.complain_if_workshift_exists(message.user):
             return complaint
         if (project := Project.objects.get_by_name_or_default_project(
                 project_name)) is None:
             return self.ability.complain_no_project_was_chosen()
 
-        WorkShift.objects.create(user=current_user, project=project).start()
+        WorkShift.objects.create(user=message.user, project=project).start()
         return Reply(f"Ett skift startades för projektet {project}.")
 
     @staticmethod
@@ -50,11 +50,7 @@ class StopWorkShift(Intent):
     """
     Ends a current WorkShift or Intermission.
     """
-    lead = ("avsluta", "stanna", "sluta", "slutar",
-            "stopp", "stoppa", "ta", "tagit", "tar")
-    trail = ("arbetspass", "pass", "skift", "jobb", "jobba",
-             "arbeta", "rast", "paus", "lunch", "vila", "rasten",
-             "jag")
+    exact_match = ("nu", "slutar", "jag")
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         return self.ability.stop_current_workshift(message)

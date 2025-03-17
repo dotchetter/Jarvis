@@ -15,10 +15,9 @@ class EnterWeight(Intent):
     weight_in_kilos = DecimalEntityField()
 
     def respond(self, message: Message) -> Reply | ReplyStream:
-        user = User.objects.from_message(message)
         if (weight := message.entities["weight_in_kilos"]) is None:
             return Reply("Vad väger du?")
-        WeightEntry.objects.create(kilos=weight, user=user)
+        WeightEntry.objects.create(kilos=weight, user=message.user)
         response = f"Vikt sparad: {weight} kg"
         return Reply(response)
 

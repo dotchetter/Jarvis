@@ -15,4 +15,4 @@ class AdministrativeAbility(Ability):
     """
     Ability class for administrative intents in Jarvis
     """
-    intents = (UserInfo, UserFeatureEnrollment)
+    intents = (UserFeatureEnrollment,)

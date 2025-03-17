@@ -16,14 +16,16 @@ class AddRecipe(Intent):
 
     name = StringEntityField(span=10)
     url = StringEntityField(identifier=UrlIdentifier)
+    comment = StringEntityField(prefixes=("kommentar",))
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         name = message.entities.get("name").casefold()
         url = message.entities.get("url")
-        user = User.objects.from_message(message)
-        recipe = Recipe.objects.create(user=user,
+        comment = message.entities.get("comment") or ""
+        recipe = Recipe.objects.create(user=message.user,
                                        name=name,
-                                       url=url)
+                                       url=url,
+                                       comment=comment)
         return Reply(f"Receptet har sparats, tack!\n{recipe}")
 
 
@@ -38,9 +40,14 @@ class GetRecipes(Intent):
     from_vendor = StringEntityField(prefixes=("från",))
 
     def respond(self, message: Message) -> Reply | ReplyStream:
-        keyword = message.entities.get("name")
+        if keyword := message.entities.get("name") is None:
+            return Reply("För att söka på recept behöver jag veta vad "
+                         "du söker efter, säg exempelvis 'sök recept "
+                         "med broccoli'.")
+
         vendor = message.entities.get("from_vendor")
         query = Recipe.objects.all()
+
         if vendor:
             vendor = vendor.lower()
             query = Recipe.objects.filter(url__contains=vendor)

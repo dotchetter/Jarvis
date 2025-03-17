@@ -1,5 +1,5 @@
 
-from datetime import datetime
+from datetime import datetime, UTC
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Sequence
 
@@ -44,8 +44,6 @@ class TimeKeeper(Ability):
         """
         Save a historic workshift from datetime or timestamps
         """
-        current_user = User.objects.from_message(message)
-
         # If from->to was entered as datetime, e.g. the shift didn't occur today
         from_datetime = message.entities["from_datetime"]
         to_datetime = message.entities["to_datetime"]
@@ -79,14 +77,14 @@ class TimeKeeper(Ability):
             start_datetime = start_datetime.replace(hour=timestamp_start.hour,
                                                     minute=timestamp_start.minute)
             if until_now:
-                end_datetime = datetime.now(tz=app.settings.TIME_ZONE)
+                end_datetime = datetime.now(tz=UTC)
             else:
                 timestamp_end = datetime.strptime(to_timestamp, dt_format)
                 end_datetime = end_datetime.replace(hour=timestamp_end.hour,
                                                     minute=timestamp_end.minute)
 
-        start_datetime = start_datetime.replace(tzinfo=app.settings.TIME_ZONE)
-        end_datetime = end_datetime.replace(tzinfo=app.settings.TIME_ZONE)
+        start_datetime = start_datetime.replace(tzinfo=UTC)
+        end_datetime = end_datetime.replace(tzinfo=UTC)
         try:
             if start_datetime > end_datetime:
                 return Reply("Felaktigt inmatade värden: Passet kan inte "
@@ -97,7 +95,7 @@ class TimeKeeper(Ability):
             return Reply("Jag kunde inte förstå när "
                          "passet började och slutade..")
 
-        WorkShift.objects.create(user=current_user,
+        WorkShift.objects.create(user=message.user,
                                  is_active=False,
                                  is_consumed=True,
                                  beginning=start_datetime,
@@ -134,10 +132,9 @@ class TimeKeeper(Ability):
         """
         Stop the currently active workshift, for user
         """
-        if (current_user := User.objects.from_message(message)) is None:
+        if message.user is None:
             return Reply("Jag vet inte vem frågan gäller?")
-        if (shift := WorkShift.objects.get_active_shift_for_user(
-                current_user)) is None:
+        if (shift := WorkShift.objects.get_active_shift_for_user(message.user)) is None:
             return Reply("Jag hittade inget aktivt arbetspass att avsluta")
         shift.stop()
         return Reply(f"Arbetspass avslutat. "
@@ -162,13 +159,12 @@ class TimeKeeper(Ability):
                          f"{', '.join(Project.all_project_names())}.")
 
         base_reply_string = "Totalt har du jobbat in {} timmar {} i projekt {}"
-        current_user = User.objects.from_message(message)
         sum_for_today = message.entities["sum_for_today"]
         sum_for_month = message.entities["sum_for_month"]
 
         if not any((sum_for_month, sum_for_today)):
             if (active_shift := WorkShift.objects.get_active_shift_for_user(
-                    current_user)) is None:
+                    message.user)) is None:
                 return Reply("Du har inget aktivt arbetspass")
 
             shift_duration = active_shift.duration
@@ -179,12 +175,12 @@ class TimeKeeper(Ability):
 
         if message.entities["sum_for_today"]:
             shifts = WorkShift.objects.get_for_today_for_user_and_project(
-                user=current_user,
+                user=message.user,
                 project=project)
             hours = self.get_total_billable_hours(*shifts)
         elif message.entities["sum_for_month"]:
             shifts = WorkShift.objects.get_all_for_user_in_current_month(
-                user=current_user,
+                user=message.user,
                 project=project)
             hours = self.get_total_billable_hours(*shifts)
             temporal_unit_for_reply = "denna månad"

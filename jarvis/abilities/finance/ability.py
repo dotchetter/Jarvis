@@ -173,15 +173,15 @@ class FinanceAbility(Ability):
 
         if author_is_lender:
             # author_is_lender supersedes author_is_borrower
-            lender = User.objects.from_message(message)
+            lender = message.user
             borrower = extract_username(message, "other_person")
             borrower = User.objects.from_username_or_alias(borrower)
         elif author_is_borrower:
-            borrower = User.objects.from_message(message)
+            borrower = message.user
             lender = extract_username(message, "other_person")
             lender = User.objects.from_username_or_alias(lender)
         else:
-            lender = User.objects.from_message(message)
+            lender = message.user
             borrower = extract_username(message, "other_person")
             borrower = User.objects.from_username_or_alias(borrower)
             author_is_lender = True
@@ -223,7 +223,7 @@ class FinanceAbility(Ability):
         reply_stream = ReplyStream()
         debts_by_lender: dict[User, int] = {}
         if message.entities["author_is_borrower"]:
-            borrower = User.objects.from_message(message)
+            borrower = message.user
         else:
             borrower_name = extract_username(message, "borrower_name")
             borrower: User = User.objects.from_username_or_alias(borrower_name)
@@ -266,7 +266,6 @@ class FinanceAbility(Ability):
             "repaid_amount")
         author_is_borrower = message.entities.get("author_is_borrower")
         mentioned_user = message.entities.get("mentioned_user")
-        author_user = User.objects.from_message(message)
 
         try:
             mentioned_user = User.objects.from_username_or_alias(mentioned_user)
@@ -277,9 +276,9 @@ class FinanceAbility(Ability):
 
         if author_is_borrower:
             lender = mentioned_user
-            borrower = author_user
+            borrower = message.user
         else:
-            lender = author_user
+            lender = message.user
             borrower = mentioned_user
 
         borrower_capitalized = borrower.username.capitalize()
@@ -435,7 +434,6 @@ class FinanceAbility(Ability):
         """
         Delete the last expense entry.
         """
-        user = User.objects.from_message(message)
-        last_expense = Expense.objects.latest(user=user)
+        last_expense = Expense.objects.latest(user=message.user)
         last_expense.delete()
         return last_expense

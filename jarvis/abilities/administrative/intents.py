@@ -1,46 +1,12 @@
-
-import pyttman
-from pyttman.core.entity_parsing.fields import StringEntityField, BoolEntityField
-from pyttman.core.intent import Intent
 from pyttman.core.containers import (
     Message,
     Reply,
     ReplyStream
 )
+from pyttman.core.entity_parsing.fields import StringEntityField, BoolEntityField
+from pyttman.core.intent import Intent
 
-from jarvis.models import User, Features
-from jarvis.abilities.finance.models import Expense
-
-
-class UserInfo(Intent):
-    """
-    Returns info about the user writing the question
-    """
-    lead = ("berätta",)
-    trail = ("mig",)
-    example = "Berätta om mig"
-    description = "Visar information för dig, som lagras i Jarvis!"
-
-    def respond(self, message: Message) -> Reply | ReplyStream:
-        if (user := User.objects.from_message(message)) is None:
-            return Reply("Det finns ingen information om dig")
-
-        expenses_for_user = Expense.objects.filter(user_reference=user).all()
-        expenses_sum = expenses_for_user.sum("price")
-        expenses_count = expenses_for_user.count()
-        finance_info = f"Du har sparat {expenses_count} utgifter totalt, " \
-                       f"till en totalsumma värd {expenses_sum} kronor."
-        aliases = ", ".join(user.aliases)
-        alias_info = f"Alias: {aliases}.\n"
-        enrolled_features = (", ".join([Features(i).name
-                                        for i in user.enrolled_features])) or "Inga"
-        features_info = f"\nAktiverade funktioner: {enrolled_features}"
-
-        info = (f"**Här är lite info om dig:\n\n**",
-                alias_info,
-                finance_info,
-                features_info)
-        return ReplyStream(info)
+from jarvis.models import Features
 
 
 class UserFeatureEnrollment(Intent):
@@ -65,8 +31,7 @@ class UserFeatureEnrollment(Intent):
         "utgifter": Features.shared_finances,
         "tidsstämpel": Features.timekeeper}
 
-    def respond(self, message: Message) -> Reply | ReplyStream:
-        user = User.objects.from_message(message)
+    def respond(self, message: Message) -> Reply:
 
         if not (feature_name := message.entities["feature_name"]):
             return Reply("Du har angett ett felaktigt namn på "
@@ -81,11 +46,11 @@ class UserFeatureEnrollment(Intent):
                          "funktionen. Försök igen senare.")
 
         if message.entities["activate_feature"]:
-            if feature.value not in user.enrolled_features:
-                user.enrolled_features.append(feature.value)
-                user.save()
+            if feature.value not in message.user.enrolled_features:
+                message.user.enrolled_features.append(feature.value)
+                message.user.save()
             return Reply("Funktionen har aktiverats.")
         elif message.entities["deactivate_feature"]:
-            if feature.value not in user.enrolled_features:
-                user.enrolled_features.remove(feature.value)
+            if feature.value not in message.user.enrolled_features:
+                message.user.enrolled_features.remove(feature.value)
             return Reply("Funktionen har inaktiverats.")

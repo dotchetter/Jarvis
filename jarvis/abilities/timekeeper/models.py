@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from datetime import time
 
 import mongoengine as me
@@ -53,7 +53,7 @@ class WorkShift(me.Document):
 
     @property
     def duration(self) -> time:
-        _end = datetime.now() if self.end is None else self.end
+        _end = datetime.now(tz=UTC) if self.end is None else self.end
         diff: timedelta = _end - self.beginning
         h = diff.seconds // 3600
         m = diff.seconds % 3600 // 60
@@ -66,7 +66,7 @@ class WorkShift(me.Document):
         of the life of this instance.
         """
         if self.is_active:
-            self.end = datetime.now()
+            self.end = datetime.now(tz=UTC)
             self.is_active = False
             self.is_consumed = True
             self.save()
@@ -84,6 +84,6 @@ class WorkShift(me.Document):
         """
         if self.is_consumed:
             raise ValueError("Cannot revive an old Workshift.")
-        self.beginning = datetime.now()
+        self.beginning = datetime.now(tz=UTC)
         self.is_active = True
         self.save()
