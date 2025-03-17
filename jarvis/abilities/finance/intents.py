@@ -100,7 +100,10 @@ class EnterMonthlyIncome(Intent):
     Allows users to enter an amount stored as their monthly
     salary in their profile
     """
-    lead = ("lön", "månadslön", "inkomst", "income", "salary")
+
+    lead = ("uppdatera",)
+    trail = ("inkomst",)
+
     description = "Ange hur mycket du har i månadslön. Beloppet används " \
                   "som en koefficient när utgifter ska fördelas rättvist " \
                   "mellan deltagare i delade utgifter."
@@ -108,14 +111,13 @@ class EnterMonthlyIncome(Intent):
     income = IntEntityField()
 
     def respond(self, message: Message) -> Reply | ReplyStream:
-        current_user = User.objects.from_message(message)
         if income := message.entities["income"]:
-            current_user.profile.gross_income = income
-            current_user.profile.save()
-            current_user.save()
+            message.user.profile.gross_income = income
+            message.user.profile.save()
+            message.user.save()
             return Reply(f"Månadsinkomst sparad: {income}:- före skatt.")
 
-        if current_income := current_user.profile.gross_income:
+        if current_income := message.user.profile.gross_income:
             return Reply(f"Din sparade månadsinkomst är {current_income} "
                          f":- före skatt.")
         return Reply(f"Du har ingen sparad månadsinkomst.")
