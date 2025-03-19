@@ -18,9 +18,12 @@ class SpeechClient(BaseClient):
     """
 
     def run_client(self):
-        user_alias = input("\n\n-> Enter username: ")
+        user_alias = ""
         print(f"\nPyttman v.{pyttman.__version__} - "
               f"CLI client", end="\n")
+
+        while not (user_alias := os.getenv(user_alias.lower().strip())):
+            user_alias = input("-> Enter your name: ")
 
         print(f"{pyttman.settings.APP_NAME} is listening!\n"
               f"(?) Use Ctrl-Z or Ctrl-C plus Return to exit",
