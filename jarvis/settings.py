@@ -49,6 +49,8 @@ ROUTER = {
 # functionalities - such as providing an API for setting 'message.author'
 # as a matching user in a custom database, language translations and
 # much more.
+now = f"The date time right now is {datetime.now()}."
+
 PLUGINS = [
     MongoEnginePlugin(
         db_name=os.getenv("MONGO_DB_NAME_DEV") if DEV_MODE else os.getenv("MONGO_DB_NAME_PROD"),
@@ -68,8 +70,8 @@ PLUGINS = [
     ),
     OpenAIPlugin(
         api_key=os.environ["OPENAI_API_KEY"],
-        system_prompt=os.environ["OPENAI_SYSTEM_PROMPT"],
-        model="gpt-4o",
+        system_prompt=now + os.environ["OPENAI_SYSTEM_PROMPT"],
+        model="gpt-4o-mini",
         max_tokens=580,
         enable_conversations=True,
         enable_memories=True,
