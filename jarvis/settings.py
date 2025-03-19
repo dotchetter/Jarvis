@@ -102,17 +102,22 @@ ABILITIES = [
     "jarvis.abilities.recipes.ability.RecipesAbility",
 ]
 
-CLIENT = {
-    "class": "pyttman.clients.community.discord.client.DiscordClient",
-    "token": os.getenv("DISCORD_TOKEN_DEV") if USE_TEST_SERVER else os.getenv("DISCORD_TOKEN_PROD"),
-    "guild": os.getenv("DISCORD_GUILD_DEV") if USE_TEST_SERVER else os.getenv("DISCORD_GUILD_PROD"),
-    "discord_intent_flags": {
-        "message_content": True,
-        "dm_messages": True,
-        "guild_messages": True,
-        "messages": True
+if os.getenv("USE_STT_CLIENT") == "True":
+    CLIENT = {
+        "class": "jarvis.clients.speech.speech_client.SpeechClient",
     }
-}
+else:
+    CLIENT = {
+        "class": "pyttman.clients.community.discord.client.DiscordClient",
+        "token": os.getenv("DISCORD_TOKEN_DEV") if USE_TEST_SERVER else os.getenv("DISCORD_TOKEN_PROD"),
+        "guild": os.getenv("DISCORD_GUILD_DEV") if USE_TEST_SERVER else os.getenv("DISCORD_GUILD_PROD"),
+        "discord_intent_flags": {
+            "message_content": True,
+            "dm_messages": True,
+            "guild_messages": True,
+            "messages": True
+        }
+    }
 
 APP_BASE_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
 

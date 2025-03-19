@@ -21,7 +21,7 @@ class SpeechToTextEngine:
                  chunk_size=512,
                  silence_threshold=2000,
                  silence_duration=2,
-                 hardware="cpu"):
+                 hardware="cuda"):
         self.model_id = model_id
         self.audio_format = audio_format
         self.channels = channels
@@ -70,7 +70,7 @@ class SpeechToTextEngine:
 
             if volume > self.silence_threshold:
                 if not is_recording:
-                    pyttman.logger.log(" -[STT]: Sound detected.")
+                    pyttman.logger.log(" - [STT]: Sound detected.")
                     is_recording = True
                 silence_count = 0
             else:
@@ -78,11 +78,10 @@ class SpeechToTextEngine:
 
             if silence_count >= (self.silence_duration * self.frame_rate / self.chunk_size):
                 if is_recording:
-                    pyttman.logger.log(" -[STT]: Silence.")
+                    pyttman.logger.log(" - [STT]: Silence.")
                     is_recording = False
                     audio_data = np.concatenate(frames, axis=0).tobytes()
                     output_text = self.transcribe_audio(audio_data)
-                    print(output_text)
                     frames.clear()
 
         # Starta mikrofoninspelning med sounddevice
