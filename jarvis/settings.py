@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 
@@ -49,6 +50,9 @@ ROUTER = {
 # functionalities - such as providing an API for setting 'message.author'
 # as a matching user in a custom database, language translations and
 # much more.
+stockholm_time = datetime.now(tz=ZoneInfo("Europe/Stockholm")
+                              ).strftime("%m/%d/%Y - %H:%M:%S")
+
 PLUGINS = [
     MongoEnginePlugin(
         db_name=os.getenv("MONGO_DB_NAME_DEV") if DEV_MODE else os.getenv("MONGO_DB_NAME_PROD"),
@@ -68,8 +72,8 @@ PLUGINS = [
     ),
     OpenAIPlugin(
         api_key=os.environ["OPENAI_API_KEY"],
-        system_prompt=os.environ["OPENAI_SYSTEM_PROMPT"],
-        model="gpt-4o",
+        system_prompt=stockholm_time + os.environ["OPENAI_SYSTEM_PROMPT"],
+        model="gpt-4o-mini",
         max_tokens=580,
         enable_conversations=True,
         enable_memories=True,
@@ -100,17 +104,22 @@ ABILITIES = [
     "jarvis.abilities.recipes.ability.RecipesAbility",
 ]
 
-CLIENT = {
-    "class": "pyttman.clients.community.discord.client.DiscordClient",
-    "token": os.getenv("DISCORD_TOKEN_DEV") if USE_TEST_SERVER else os.getenv("DISCORD_TOKEN_PROD"),
-    "guild": os.getenv("DISCORD_GUILD_DEV") if USE_TEST_SERVER else os.getenv("DISCORD_GUILD_PROD"),
-    "discord_intent_flags": {
-        "message_content": True,
-        "dm_messages": True,
-        "guild_messages": True,
-        "messages": True
+if os.getenv("USE_STT_CLIENT") == "True":
+    CLIENT = {
+        "class": "jarvis.clients.speech.speech_client.SpeechClient",
     }
-}
+else:
+    CLIENT = {
+        "class": "pyttman.clients.community.discord.client.DiscordClient",
+        "token": os.getenv("DISCORD_TOKEN_DEV") if USE_TEST_SERVER else os.getenv("DISCORD_TOKEN_PROD"),
+        "guild": os.getenv("DISCORD_GUILD_DEV") if USE_TEST_SERVER else os.getenv("DISCORD_GUILD_PROD"),
+        "discord_intent_flags": {
+            "message_content": True,
+            "dm_messages": True,
+            "guild_messages": True,
+            "messages": True
+        }
+    }
 
 APP_BASE_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
 

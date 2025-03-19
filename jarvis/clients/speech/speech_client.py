@@ -18,9 +18,12 @@ class SpeechClient(BaseClient):
     """
 
     def run_client(self):
-        user_alias = os.environ["SPEECH_USER_ALIAS"]
+        user_alias = ""
         print(f"\nPyttman v.{pyttman.__version__} - "
               f"CLI client", end="\n")
+
+        while not (user_alias := os.getenv(user_alias.lower().strip())):
+            user_alias = input("-> Enter your name: ")
 
         print(f"{pyttman.settings.APP_NAME} is listening!\n"
               f"(?) Use Ctrl-Z or Ctrl-C plus Return to exit",
@@ -47,12 +50,11 @@ class SpeechClient(BaseClient):
                     if text.startswith("«") or text.startswith("»"):
                         continue
 
-                    require_keyword = time() - dialog_refreshed > 60
-                    print("Require keyword:", require_keyword)
+                    require_keyword = (time() - dialog_refreshed > 60)
                     if require_keyword and not text_contains_jarvis(text):
+                        print("Ignoring dialogue, address me by name to unlock.")
                         continue
 
-                    dialog_refreshed = time()
                     message = Message(text, client=self)
                     message.author.id = user_alias
                     reply = self.message_router.get_reply(message)
@@ -60,8 +62,11 @@ class SpeechClient(BaseClient):
                     if isinstance(reply, ReplyStream):
                         while reply.qsize():
                             tts_client.say(reply.get())
+                        dialog_refreshed = time()
                     else:
                         tts_client.say(reply.as_str())
+                        dialog_refreshed = time()
+
 
             except (KeyboardInterrupt, EOFError):
                 sys.exit(0)
