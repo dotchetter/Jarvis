@@ -50,8 +50,6 @@ ROUTER = {
 # functionalities - such as providing an API for setting 'message.author'
 # as a matching user in a custom database, language translations and
 # much more.
-stockholm_time = datetime.now(tz=ZoneInfo("Europe/Stockholm")
-                              ).strftime("%m/%d/%Y - %H:%M:%S")
 
 PLUGINS = [
     MongoEnginePlugin(
@@ -72,9 +70,11 @@ PLUGINS = [
     ),
     OpenAIPlugin(
         api_key=os.environ["OPENAI_API_KEY"],
-        system_prompt=stockholm_time + os.environ["OPENAI_SYSTEM_PROMPT"],
+        system_prompt=os.environ["OPENAI_SYSTEM_PROMPT"],
         model="gpt-4o-mini",
         max_tokens=580,
+        time_aware=True,
+        time_zone=ZoneInfo("Europe/Stockholm"),
         enable_conversations=True,
         enable_memories=True,
         purge_all_memories_callback=mongo_purge_all_memories,
