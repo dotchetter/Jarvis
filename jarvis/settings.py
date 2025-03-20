@@ -107,6 +107,13 @@ ABILITIES = [
 if os.getenv("USE_STT_CLIENT") == "True":
     CLIENT = {
         "class": "jarvis.clients.speech.speech_client.SpeechClient",
+        "greeting_message": os.environ["STT_GREETING_MESSAGE"],
+        "silence_seconds_before_standby": os.environ["STT_SILENCE_SECONDS_BEFORE_STANDBY"],
+        "standby_mode_message": os.environ["STT_STANDBY_MODE_MESSAGE"],
+        "name_similarity_threshold_percent": int(os.environ["STT_NAME_SIMILARITY_THRESHOLD_PERCENT"]),
+        "silence_seconds_before_processing": os.environ["STT_SILENCE_SECONDS_BEFORE_PROCESSING"],
+        "mute_word": os.environ["STT_MUTE_WORD"],
+        "volume_threshold": os.environ["STT_VOLUME_THRESHOLD"],
     }
 else:
     CLIENT = {
