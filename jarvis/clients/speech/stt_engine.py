@@ -14,12 +14,12 @@ class SpeechToTextEngine:
     """
 
     def __init__(self,
-                 model_id="KBLab/kb-whisper-small",
+                 model_id,
                  audio_format=np.int16,
                  channels=1,
                  frame_rate=16000,
                  chunk_size=512,
-                 silence_threshold=2000,
+                 volume_threshold=2000,
                  silence_duration=2,
                  hardware="cuda"):
         self.model_id = model_id
@@ -27,7 +27,7 @@ class SpeechToTextEngine:
         self.channels = channels
         self.frame_rate = frame_rate
         self.chunk_size = chunk_size
-        self.silence_threshold = silence_threshold
+        self.volume_threshold = volume_threshold
         self.silence_duration = silence_duration
         self.hardware = hardware
         self.model = WhisperModel(
@@ -50,8 +50,11 @@ class SpeechToTextEngine:
         audio.export(audio_wav, format="wav")
         audio_wav.seek(0)
         segments, info = self.model.transcribe(audio_wav,
-                                               condition_on_previous_text=False)
-        return "\n".join([segment.text for segment in segments])[1:]
+                                               condition_on_previous_text=True)
+
+        output = "\n".join([segment.text for segment in segments])[1:]
+        print(output)
+        return output
 
     def transcribe_microphone(self):
         """
@@ -68,7 +71,7 @@ class SpeechToTextEngine:
             frames.append(indata.copy())
             volume = np.max(np.abs(indata))
 
-            if volume > self.silence_threshold:
+            if volume > self.volume_threshold:
                 if not is_recording:
                     pyttman.logger.log(" - [STT]: Sound detected.")
                     is_recording = True
@@ -84,7 +87,6 @@ class SpeechToTextEngine:
                     output_text = self.transcribe_audio(audio_data)
                     frames.clear()
 
-        # Starta mikrofoninspelning med sounddevice
         with sd.InputStream(callback=callback,
                             channels=self.channels,
                             dtype=self.audio_format,
