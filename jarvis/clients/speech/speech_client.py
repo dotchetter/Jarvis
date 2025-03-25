@@ -1,4 +1,5 @@
 import os
+import re
 import string
 import sys
 from time import time
@@ -27,8 +28,10 @@ class SpeechClient(BaseClient):
                  name_similarity_threshold_percent: float = 50,
                  volume_threshold: int = 2000,
                  mute_word: str = "mute",
+                 user_name_prompt: str = "What's your name?",
                  **kwargs):
 
+        self.user_name_prompt = user_name_prompt
         self.greeting_message = greeting_message
         self.silence_seconds_before_standby = int(silence_seconds_before_standby)
         self.name_similarity_threshold_percent = int(name_similarity_threshold_percent)
@@ -69,75 +72,70 @@ class SpeechClient(BaseClient):
 
 
     def run_client(self):
-        """
-        Listen for user input, process it and generate a reply.
-        """
-        user_name, user_alias = self.authorize()
+        user_name = os.getenv("STT_USER_NAME", "")
+        print(f"\nPyttman v.{pyttman.__version__} - "
+              f"Speech client", end="\n")
+
+        while not (user_alias := os.getenv(user_name.lower())):
+            self.tts_client.say(self.user_name_prompt)
+            user_name = self.stt_client.transcribe_microphone().lower().strip()
+            user_name = re.sub(f"[{string.punctuation}]", "", user_name)
+
+        print(f"{pyttman.settings.APP_NAME} is listening!\n"
+              f"(?) Use Ctrl-Z or Ctrl-C plus Return to exit",
+              end="\n\n")
+
+        self.tts_client.say(f"{pyttman.settings.APP_NAME} is online.")
+        self.tts_client.say(self.greeting_message.format(user_name))
+
         dialog_refreshed = time()
-        standby_announced = False
         muted = False
 
-        logger.log(f"\nPyttman v.{pyttman.__version__} - CLI client")
-        logger.log(f"{pyttman.settings.APP_NAME} is listening!\n"
-              f"(?) Use Ctrl-Z or Ctrl-C plus Return to exit")
+        def text_contains_unmute(text):
+            # Remove all chars except letters and spaces
 
-        def talking_to_me(text):
-            """
-            Determine if a human is talking to us, the AI.
-            """
+            app_name = pyttman.settings.APP_NAME.lower()
             for word in text.lower().strip().split():
-                word = word.translate(str.maketrans("", "", string.punctuation))
-                percent = fuzz.ratio(word, pyttman.app.settings.APP_NAME)
-                if percent >= self.name_similarity_threshold_percent:
+                similarity = fuzz.ratio(word, app_name)
+                print("word:", word, "check", app_name, "similarity:", similarity)
+                if similarity >= self.name_similarity_threshold_percent:
                     return True
             return False
 
-        def trigger_mute(text):
-            """
-            Determine if the user wants to mute the AI.
-            """
+        def text_contains_mute(text):
             return self.mute_word in text.lower().strip()
-
-        def silence_standby():
-            """
-            Determine if the user is silent for too long.
-            """
-            return (time() - dialog_refreshed >
-                    self.silence_seconds_before_standby)
-
-        self.tts_client.say(self.greeting_message.format(user_name))
 
         while True:
             try:
-                if text := self.stt_client.transcribe_microphone():
+                if not (text := self.stt_client.transcribe_microphone()):
+                    continue
 
-                    if text.startswith("«") or text.startswith("»"):
-                        continue
+                cleaned_text = re.sub(f"[{re.escape(string.punctuation)}]", "", text).strip().lower()
+                if not muted and text_contains_mute(cleaned_text):
+                    muted = True
+                    logger.log(f" - [SpeechClient]: Muted.")
+                    continue
+                elif muted and text_contains_unmute(cleaned_text):
+                    dialog_refreshed = time()
+                    muted = False
 
-                    if trigger_mute(text) or silence_standby():
-                        muted = True
+                timeout_reached = (time() - dialog_refreshed > 120)
+                if timeout_reached or muted:
+                    continue
 
-                    if muted and not talking_to_me(text) or muted:
-                        if not standby_announced:
-                            logger.log(f" - [{pyttman.app.settings.APP_NAME}]: "
-                                       f"Stopped listening, call me by my name to "
-                                       f"continue conversation.")
-                            self.tts_client.say(self.standby_mode_message)
-                            standby_announced = True
-                        continue
+                message = Message(text, client=self)
+                message.author.id = user_alias
+                reply = self.message_router.get_reply(message)
 
-                    standby_announced = False
-                    message = Message(text, client=self)
-                    message.author.id = user_alias
-                    reply = self.message_router.get_reply(message)
+                if isinstance(reply, ReplyStream):
+                    while reply.qsize():
+                        self.tts_client.say(reply.get())
+                    dialog_refreshed = time()
+                else:
+                    self.tts_client.say(reply.as_str())
+                    dialog_refreshed = time()
 
-                    if isinstance(reply, ReplyStream):
-                        while reply.qsize():
-                            self.tts_client.say(reply.get())
-                        dialog_refreshed = time()
-                    else:
-                        self.tts_client.say(reply.as_str())
-                        dialog_refreshed = time()
+
             except (KeyboardInterrupt, EOFError):
                 logger.log("\n- [SpeechClient]: Exiting..")
                 self.tts_client.say("AI systems shutting down.")

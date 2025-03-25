@@ -1,8 +1,5 @@
 import io
 import os
-import tempfile
-from pathlib import Path
-from typing import Literal
 
 import pygame
 from openai import OpenAI
@@ -25,21 +22,17 @@ class TextToSpeechEngine:
         Convert text to speech and play the audio.
         """
         client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-        speech_file_path = "speech.mp3"
+        response = client.audio.speech.create(
+            model=self.model,
+            voice=self.voice,
+            speed=float(self.speed),
+            input=text)
 
-        with tempfile.TemporaryDirectory() as tempdir:
-            speech_file_path = Path(tempdir) / Path(speech_file_path)
-            response = client.audio.speech.create(
-                model=self.model,
-                voice=self.voice,
-                speed=float(self.speed),
-                input=text)
+        pygame.mixer.init()
+        pygame.mixer.music.load(io.BytesIO(response.content))
+        pygame.mixer.music.play()
 
-            pygame.mixer.init()
-            pygame.mixer.music.load(io.BytesIO(response.content))
-            pygame.mixer.music.play()
+        while pygame.mixer.music.get_busy():
+            pygame.time.Clock().tick(10)
 
-            while pygame.mixer.music.get_busy():
-                pygame.time.Clock().tick(10)
-
-            pygame.mixer.quit()
+        pygame.mixer.quit()

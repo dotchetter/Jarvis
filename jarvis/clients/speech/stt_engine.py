@@ -50,10 +50,9 @@ class SpeechToTextEngine:
         audio.export(audio_wav, format="wav")
         audio_wav.seek(0)
         segments, info = self.model.transcribe(audio_wav,
-                                               condition_on_previous_text=True)
+                                               condition_on_previous_text=False)
 
         output = "\n".join([segment.text for segment in segments])[1:]
-        print(output)
         return output
 
     def transcribe_microphone(self):
@@ -64,6 +63,15 @@ class SpeechToTextEngine:
         silence_count = 0
         is_recording = False
         output_text = ""
+
+        def gibberish(text):
+            """
+            Determine if the microphone is picking up gibberish.
+            """
+            if text == "musik":
+                return True
+            if set(text).intersection(set("«|»<>")):
+                return True
 
         def callback(indata, *_):
             nonlocal silence_count, is_recording, output_text
@@ -96,10 +104,7 @@ class SpeechToTextEngine:
                 if output_text:
                     break
                 time.sleep(0.1)
-        return output_text
-
-
-if __name__ == "__main__":
-    stt_engine = SpeechToTextEngine()
-    while True:
-        result = stt_engine.transcribe_microphone()
+        output = output_text if not gibberish(output_text.lower().strip()) else ""
+        output = output.replace("\n", "")
+        pyttman.logger.log(level="info", message=f" - [STT]: {output}")
+        return output
