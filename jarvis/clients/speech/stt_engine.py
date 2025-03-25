@@ -14,12 +14,12 @@ class SpeechToTextEngine:
     """
 
     def __init__(self,
-                 model_id="KBLab/kb-whisper-small",
+                 model_id,
                  audio_format=np.int16,
                  channels=1,
                  frame_rate=16000,
                  chunk_size=512,
-                 silence_threshold=2000,
+                 volume_threshold=2000,
                  silence_duration=2,
                  hardware="cuda"):
         self.model_id = model_id
@@ -27,7 +27,7 @@ class SpeechToTextEngine:
         self.channels = channels
         self.frame_rate = frame_rate
         self.chunk_size = chunk_size
-        self.silence_threshold = silence_threshold
+        self.volume_threshold = volume_threshold
         self.silence_duration = silence_duration
         self.hardware = hardware
         self.model = WhisperModel(
@@ -51,7 +51,9 @@ class SpeechToTextEngine:
         audio_wav.seek(0)
         segments, info = self.model.transcribe(audio_wav,
                                                condition_on_previous_text=False)
-        return "\n".join([segment.text for segment in segments])[1:]
+
+        output = "\n".join([segment.text for segment in segments])[1:]
+        return output
 
     def transcribe_microphone(self):
         """
@@ -62,13 +64,22 @@ class SpeechToTextEngine:
         is_recording = False
         output_text = ""
 
+        def gibberish(text):
+            """
+            Determine if the microphone is picking up gibberish.
+            """
+            if text == "musik":
+                return True
+            if set(text).intersection(set("«|»<>")):
+                return True
+
         def callback(indata, *_):
             nonlocal silence_count, is_recording, output_text
 
             frames.append(indata.copy())
             volume = np.max(np.abs(indata))
 
-            if volume > self.silence_threshold:
+            if volume > self.volume_threshold:
                 if not is_recording:
                     pyttman.logger.log(" - [STT]: Sound detected.")
                     is_recording = True
@@ -84,7 +95,6 @@ class SpeechToTextEngine:
                     output_text = self.transcribe_audio(audio_data)
                     frames.clear()
 
-        # Starta mikrofoninspelning med sounddevice
         with sd.InputStream(callback=callback,
                             channels=self.channels,
                             dtype=self.audio_format,
@@ -94,10 +104,7 @@ class SpeechToTextEngine:
                 if output_text:
                     break
                 time.sleep(0.1)
-        return output_text
-
-
-if __name__ == "__main__":
-    stt_engine = SpeechToTextEngine()
-    while True:
-        result = stt_engine.transcribe_microphone()
+        output = output_text if not gibberish(output_text.lower().strip()) else ""
+        output = output.replace("\n", "")
+        pyttman.logger.log(level="info", message=f" - [STT]: {output}")
+        return output

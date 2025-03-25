@@ -40,7 +40,6 @@ class GetRecipes(Intent):
     from_vendor = StringEntityField(prefixes=("från",))
 
     def respond(self, message: Message) -> Reply | ReplyStream:
-        print("Message:", message, message.content)
         if (keyword := message.entities.get("name")) is None:
             return Reply("För att söka på recept behöver jag veta vad "
                          "du söker efter, säg exempelvis 'sök recept "

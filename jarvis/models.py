@@ -58,7 +58,12 @@ class Features(enum.Enum):
     """
     shared_finances = 0
     timekeeper = 1
+    spotify = 2
 
+    def is_private(self, feature):
+        if feature is self.spotify:
+            return True
+        return False
 
 class UserProfile(me.Document):
     """
@@ -99,6 +104,9 @@ class User(me.Document):
         if self._profile is None:
             self._profile = UserProfile()
         return self._profile
+
+    def feature_enabled(self, feature: Features) -> bool:
+        return feature.value in self.enrolled_features
 
 class RAGMemory(me.Document):
     """

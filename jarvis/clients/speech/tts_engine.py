@@ -1,38 +1,38 @@
+import io
 import os
-import tempfile
-from pathlib import Path
 
 import pygame
-from dotenv import load_dotenv
 from openai import OpenAI
 
 
 class TextToSpeechEngine:
+    """
+    Convert text to speech using OpenAI's API.
+    """
+    def __init__(self,
+                 model: str,
+                 voice: str,
+                 speed: str | int | float = 1.0):
+        self.model = model
+        self.voice = voice
+        self.speed = speed
 
     def say(self, text):
+        """
+        Convert text to speech and play the audio.
+        """
         client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-        speech_file_path = "speech.mp3"
+        response = client.audio.speech.create(
+            model=self.model,
+            voice=self.voice,
+            speed=float(self.speed),
+            input=text)
 
-        with tempfile.TemporaryDirectory() as tempdir:
-            speech_file_path = Path(tempdir) / Path(speech_file_path)
-            response = client.audio.speech.create(
-                model="tts-1",
-                voice="onyx",
-                input=text)
+        pygame.mixer.init()
+        pygame.mixer.music.load(io.BytesIO(response.content))
+        pygame.mixer.music.play()
 
-            response.stream_to_file(speech_file_path)
-            pygame.mixer.init()
-            pygame.mixer.music.load(speech_file_path)
-            pygame.mixer.music.play()
+        while pygame.mixer.music.get_busy():
+            pygame.time.Clock().tick(10)
 
-            while pygame.mixer.music.get_busy():
-                pygame.time.Clock().tick(10)
-
-            pygame.mixer.music.stop()
-            pygame.mixer.quit()
-
-
-if __name__ == "__main__":
-    load_dotenv()
-    tts_client = TextToSpeechEngine()
-    tts_client.say("Hej, jag heter Jarvis. Vad kan jag hjälpa dig med idag?")
+        pygame.mixer.quit()
