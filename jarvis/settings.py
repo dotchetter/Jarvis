@@ -4,13 +4,12 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
+from pyttman_base_plugin import PyttmanPlugin
+from pyttman_mongoengine_plugin import MongoEnginePlugin
+from pyttman_openai_plugin import OpenAIPlugin
 
 from jarvis.app import mongo_purge_all_memories, mongo_purge_memories, mongo_append_memory, mongo_get_memories
 from jarvis.models import User
-
-from pyttman.core.plugins.base import PyttmanPluginIntercept
-from pyttman.core.plugins.mongoengine_plugin import MongoEnginePlugin
-from pyttman.core.plugins.openai_plugin import OpenAIPlugin
 
 load_dotenv()
 
@@ -63,17 +62,17 @@ PLUGINS = [
             custom_queryset_method_name="from_alias",
         ),
         allowed_intercepts=[
-            PyttmanPluginIntercept.before_app_start,
-            PyttmanPluginIntercept.after_app_stops,
-            PyttmanPluginIntercept.before_intent
+            MongoEnginePlugin.PluginInterceptPoint.before_app_start,
+            MongoEnginePlugin.PluginInterceptPoint.after_app_stops,
+            MongoEnginePlugin.PluginInterceptPoint.before_intent
         ]
     ),
     OpenAIPlugin(
         api_key=os.environ["OPENAI_API_KEY"],
         system_prompt=os.environ["OPENAI_SYSTEM_PROMPT"],
-        model="gpt-4o-mini",
-        max_tokens=580,
+        model=os.environ["OPENAI_MODEL_ID"],
         time_aware=True,
+        memory_updated_notice="Det ska jag komma ihåg.",
         time_zone=ZoneInfo("Europe/Stockholm"),
         enable_conversations=True,
         enable_memories=True,
@@ -82,18 +81,9 @@ PLUGINS = [
         add_memory_callback=mongo_append_memory,
         get_memories_callback=mongo_get_memories,
         allowed_intercepts=[
-            PyttmanPluginIntercept.no_intent_match,
-        ]
+            PyttmanPlugin.PluginInterceptPoint.no_intent_match,
+        ],
     ),
-    OpenAIPlugin(
-        api_key=os.environ["OPENAI_API_KEY"],
-        system_prompt=os.environ["OPENAI_SPELL_CHECKER_SYSTEM_PROMPT"],
-        model="gpt-4o-mini",
-        max_tokens=580,
-        allowed_intercepts=[
-            PyttmanPluginIntercept.before_router
-        ]
-    )
 ]
 
 ABILITIES = [
@@ -102,6 +92,7 @@ ABILITIES = [
     "jarvis.abilities.timekeeper.ability.TimeKeeper",
     "jarvis.abilities.weightkeeper.ability.WeightKeeper",
     "jarvis.abilities.recipes.ability.RecipesAbility",
+    "jarvis.abilities.musicplayer.ability.SpotifyAbility",
 ]
 
 if os.getenv("USE_STT_CLIENT") == "True":
@@ -114,6 +105,7 @@ if os.getenv("USE_STT_CLIENT") == "True":
         "silence_seconds_before_processing": os.environ["STT_SILENCE_SECONDS_BEFORE_PROCESSING"],
         "mute_word": os.environ["STT_MUTE_WORD"],
         "volume_threshold": os.environ["STT_VOLUME_THRESHOLD"],
+        "user_name_prompt": os.environ["STT_USER_NAME_PROMPT"],
     }
 else:
     CLIENT = {
@@ -127,6 +119,16 @@ else:
             "messages": True
         }
     }
+    PLUGINS.append(
+        OpenAIPlugin(
+            api_key=os.environ["OPENAI_API_KEY"],
+            system_prompt=os.environ["OPENAI_SPELL_CHECKER_SYSTEM_PROMPT"],
+            model="gpt-4o-mini",
+            allowed_intercepts=[
+                PyttmanPlugin.PluginInterceptPoint.before_router
+            ]
+        )
+    )
 
 APP_BASE_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
 
