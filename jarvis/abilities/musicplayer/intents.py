@@ -6,6 +6,30 @@ from pyttman.core.entity_parsing.fields import StringEntityField
 from pyttman.core.intent import Intent
 
 
+class LoginSpotify(Intent):
+    """
+    Login to spotify.
+    """
+    lead = ("logga", "in")
+    trail = ("spotify",)
+    ordered = True
+    exclude_lead_in_entities = True
+    exclude_trail_in_entities = True
+
+    code = StringEntityField(span=500, prefixes=("länk",))
+
+    def respond(self, message: Message) -> Reply | ReplyStream:
+        """
+        Login to spotify.
+        """
+        code = message.entities["code"].split("code=")[1][1:]
+        self.ability.set_auth_code(code)
+        if self.ability.ready:
+            current_user = self.ability.spotify.current_user()["display_name"]
+            return Reply(f"Du är nu inloggad på Spotify som {current_user}.")
+        return Reply("Något gick fel, jag kunde inte logga in på Spotify.")
+
+
 class PlaySpotify(Intent):
     """
     Start playback on spotify.
@@ -21,6 +45,8 @@ class PlaySpotify(Intent):
         """
         Start playback on spotify.
         """
+        if not self.ability.ready:
+            return self.ability.get_auth_url()
         if user_disabled := self.ability.assert_user_enabled(message.user):
             return user_disabled
         if (song_name := message.entities["song_name"]) is None:
@@ -66,6 +92,8 @@ class PauseSpotify(Intent):
         """
         Pause playback on spotify.
         """
+        if not self.ability.ready:
+            return self.ability.get_auth_url()
         if user_disabled := self.ability.assert_user_enabled(message.user):
             return user_disabled
         if not self.ability.now_playing():
@@ -85,6 +113,8 @@ class IncreaseVolumeSpotify(Intent):
         """
         Increase volume on spotify.
         """
+        if not self.ability.ready:
+            return self.ability.get_auth_url()
         if user_disabled := self.ability.assert_user_enabled(message.user):
             return user_disabled
         if not self.ability.current_device():
@@ -106,6 +136,8 @@ class DecreaseVolumeSpotify(Intent):
         """
         Decrease volume on spotify.
         """
+        if not self.ability.ready:
+            return self.ability.get_auth_url()
         if user_disabled := self.ability.assert_user_enabled(message.user):
             return user_disabled
         if not self.ability.current_device():
@@ -127,6 +159,8 @@ class NextSpotify(Intent):
         """
         Skip to next track on spotify.
         """
+        if not self.ability.ready:
+            return self.ability.get_auth_url()
         if user_disabled := self.ability.assert_user_enabled(message.user):
             return user_disabled
         if not self.ability.now_playing():
@@ -147,6 +181,8 @@ class PreviousSpotify(Intent):
         """
         Skip to previous track on spotify.
         """
+        if not self.ability.ready:
+            return self.ability.get_auth_url()
         if user_disabled := self.ability.assert_user_enabled(message.user):
             return user_disabled
         if not self.ability.now_playing():
@@ -166,6 +202,8 @@ class WhatIsPlayingSpotify(Intent):
         """
         Get information about the current track playing on spotify.
         """
+        if not self.ability.ready:
+            return self.ability.get_auth_url()
         if user_disabled := self.ability.assert_user_enabled(message.user):
             return user_disabled
         now_playing = self.ability.now_playing()
