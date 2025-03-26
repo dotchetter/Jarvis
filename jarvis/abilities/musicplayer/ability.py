@@ -12,11 +12,8 @@ class SpotifyAbility(Ability):
     """
     Interface with Spotify, a wrapper on the pre-existing spotpy library
     """
-    ready = False
-    auth_manager: SpotifyOAuth
     spotify: spotipy.Spotify
     intents = (
-        LoginSpotify,
         PlaySpotify,
         PauseSpotify,
         IncreaseVolumeSpotify,
@@ -31,23 +28,9 @@ class SpotifyAbility(Ability):
                                     client_secret=os.environ["SPOTIFY_API_KEY"],
                                     redirect_uri=os.environ["SPOTIFY_REDIRECT_URL"],
                                     scope=os.environ["SPOTIFY_ACCESS_SCOPE"])
-        self.storage["device_id"] = os.environ["SPOTIFY_DEVICE_ID"]
-        self.auth_manager = auth_manager
         self.spotify = spotipy.Spotify(auth_manager=auth_manager)
-
-    def get_auth_url(self):
-        url = self.auth_manager.get_authorize_url()
-        return Reply("Du måste ge mig åtkomst till ditt konto först. Öppna denna länk i din webbläsare. "
-                     "Vänta en liten stund. Kopiera sedan länken som står i din webbläsares adressfält "
-                     "efter en stund, även om du får ett felmeddelande.\n\nSvara detta meddelande med "
-                     f"logga in på spotify med länk' följt av länken, för att logga in på Spotify.\n\n {url}")
-
-    def set_auth_code(self, auth_code):
-        token_data = self.spotify.auth_manager.get_access_token(auth_code)
-        access_token = token_data["access_token"]
-        self.spotify = spotipy.Spotify(auth=access_token)
-        self.storage["access_token"] = access_token
-        self.ready = True
+        self.storage["access_token"] = self.spotify.auth_manager.get_access_token()
+        self.storage["device_id"] = os.environ["SPOTIFY_DEVICE_ID"]
 
     def devices_available(self):
         return self.spotify.devices()
