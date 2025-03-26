@@ -13,8 +13,7 @@ class CreateWorkShift(Intent):
     """
     Starts a WorkShift or an Intermission.
     """
-    lead = ("starta", "börja", "börjar", "påbörja", "ta", "tagit", "tar")
-    trail = ("arbetspass", "pass", "skift", "jobb", "jobba", "arbeta")
+    exact_match = ("jag", "börjar", "jobba")
     project_name = StringEntityField(valid_strings=Project.all_project_names)
 
     def respond(self, message: Message) -> Reply | ReplyStream:
