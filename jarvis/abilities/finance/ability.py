@@ -332,7 +332,7 @@ class FinanceAbility(Ability):
 
         # If there's an accounting entry, use that as the start date for the expenses to get
         datetime_format = pyttman.app.settings.DATETIME_FORMAT
-        date_format = pyttman.app.settings.DATE_FORMAT
+        date_format = pyttman.app.settings.DATETIME_FORMAT
         period_start, period_end = None, None
 
         for dt_format in (datetime_format, date_format):

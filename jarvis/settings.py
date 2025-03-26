@@ -102,7 +102,7 @@ if os.getenv("USE_STT_CLIENT") == "True":
         "silence_seconds_before_standby": os.environ["STT_SILENCE_SECONDS_BEFORE_STANDBY"],
         "standby_mode_message": os.environ["STT_STANDBY_MODE_MESSAGE"],
         "name_similarity_threshold_percent": int(os.environ["STT_NAME_SIMILARITY_THRESHOLD_PERCENT"]),
-        "silence_seconds_before_processing": os.environ["STT_SILENCE_SECONDS_BEFORE_PROCESSING"],
+        "silence_seconds_before_processing": int(os.environ["STT_SILENCE_SECONDS_BEFORE_PROCESSING"]),
         "mute_word": os.environ["STT_MUTE_WORD"],
         "volume_threshold": os.environ["STT_VOLUME_THRESHOLD"],
         "user_name_prompt": os.environ["STT_USER_NAME_PROMPT"],
@@ -139,6 +139,7 @@ LOG_TO_STDOUT = True
 APP_NAME = "jarvis"
 APP_VERSION = "1.5.5"
 DATETIME_FORMAT = "%Y-%m-%d-%H:%M"
+DATE_FORMAT = "%Y-%m-%d"
 TIMESTAMP_FORMAT = "%H:%M"
 
 TIME_ZONE = datetime.utcnow().astimezone().tzinfo
