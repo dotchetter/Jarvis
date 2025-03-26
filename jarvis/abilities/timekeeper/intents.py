@@ -49,8 +49,7 @@ class StopWorkShift(Intent):
     """
     Ends a current WorkShift or Intermission.
     """
-    lead = ("avsluta",)
-    trail = ("arbetspass",)
+    exact_match = ("nu", "slutar", "jag")
 
     def respond(self, message: Message) -> Reply | ReplyStream:
         return self.ability.stop_current_workshift(message)
