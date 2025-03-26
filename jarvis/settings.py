@@ -92,10 +92,10 @@ ABILITIES = [
     "jarvis.abilities.timekeeper.ability.TimeKeeper",
     "jarvis.abilities.weightkeeper.ability.WeightKeeper",
     "jarvis.abilities.recipes.ability.RecipesAbility",
-    "jarvis.abilities.musicplayer.ability.SpotifyAbility",
 ]
 
-if os.getenv("USE_STT_CLIENT") == "True":
+if os.getenv("RUNNING_AT_HOME") == "True":
+    ABILITIES.append("jarvis.abilities.musicplayer.ability.SpotifyAbility")
     CLIENT = {
         "class": "jarvis.clients.speech.speech_client.SpeechClient",
         "greeting_message": os.environ["STT_GREETING_MESSAGE"],
