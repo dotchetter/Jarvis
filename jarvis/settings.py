@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 from pyttman_base_plugin import PyttmanPlugin
 from pyttman_mongoengine_plugin import MongoEnginePlugin
-from pyttman_openai_plugin import OpenAIPlugin
+from pyttman_openai_plugin.plugin import OpenAIPlugin
 
 from jarvis.app import mongo_purge_all_memories, mongo_purge_memories, mongo_append_memory, mongo_get_memories
 from jarvis.models import User
@@ -20,6 +20,8 @@ DB_NAME_DEV = os.getenv("MONGO_DB_NAME_DEV")
 APPEND_LOG_FILES = True
 USE_TEST_SERVER = os.getenv("USE_TEST_SERVER") == "True"
 OFFLINE_MODE = False
+
+TIME_ZONE = ZoneInfo(os.environ["TIME_ZONE"])
 
 ROUTER = {
     # The router is responsible for matching messages to Intents.
@@ -50,6 +52,7 @@ ROUTER = {
 # as a matching user in a custom database, language translations and
 # much more.
 
+
 PLUGINS = [
     MongoEnginePlugin(
         db_name=os.getenv("MONGO_DB_NAME_DEV") if DEV_MODE else os.getenv("MONGO_DB_NAME_PROD"),
@@ -73,7 +76,7 @@ PLUGINS = [
         model=os.environ["OPENAI_MODEL_ID"],
         time_aware=True,
         memory_updated_notice="Det ska jag komma ihåg.",
-        time_zone=ZoneInfo("Europe/Stockholm"),
+        time_zone=TIME_ZONE,
         enable_conversations=True,
         enable_memories=True,
         purge_all_memories_callback=mongo_purge_all_memories,
@@ -92,10 +95,10 @@ ABILITIES = [
     "jarvis.abilities.timekeeper.ability.TimeKeeper",
     "jarvis.abilities.weightkeeper.ability.WeightKeeper",
     "jarvis.abilities.recipes.ability.RecipesAbility",
+    "jarvis.abilities.musicplayer.ability.SpotifyAbility"
 ]
 
-if os.getenv("RUNNING_AT_HOME") == "True":
-    ABILITIES.append("jarvis.abilities.musicplayer.ability.SpotifyAbility")
+if os.getenv("USE_SPEECH_CLIENT") == "True":
     CLIENT = {
         "class": "jarvis.clients.speech.speech_client.SpeechClient",
         "greeting_message": os.environ["STT_GREETING_MESSAGE"],
