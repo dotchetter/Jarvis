@@ -297,13 +297,8 @@ class TimeKeeper(Ability):
             work_shifts_for_date = date_to_work_shifts[date]
             billable_hours = self.get_total_billable_hours(*work_shifts_for_date)
 
-            sum_string = "Totalt arbetade timmar denna dag:"
-            worksheet.write(row, 0, sum_string)
-            worksheet.write(row, 1, billable_hours)
-            row += 1
-            worksheet.write(row, 0, "")
-            row += 1
             worksheet.write(row, 0, date.strftime("%Y-%m-%d"), bold)
+            worksheet.write(row, 1, billable_hours)
             row += 1
 
         all_sum = self.get_total_billable_hours(*all_work_shifts)
