@@ -95,7 +95,6 @@ ABILITIES = [
     "jarvis.abilities.timekeeper.ability.TimeKeeper",
     "jarvis.abilities.weightkeeper.ability.WeightKeeper",
     "jarvis.abilities.recipes.ability.RecipesAbility",
-    "jarvis.abilities.musicplayer.ability.SpotifyAbility"
 ]
 
 if os.getenv("USE_SPEECH_CLIENT") == "True":
@@ -110,6 +109,7 @@ if os.getenv("USE_SPEECH_CLIENT") == "True":
         "volume_threshold": os.environ["STT_VOLUME_THRESHOLD"],
         "user_name_prompt": os.environ["STT_USER_NAME_PROMPT"],
     }
+    ABILITIES.append("jarvis.abilities.musicplayer.ability.SpotifyAbility")
 else:
     CLIENT = {
         "class": "pyttman.clients.community.discord.client.DiscordClient",
