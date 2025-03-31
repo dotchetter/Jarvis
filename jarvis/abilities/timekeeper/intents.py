@@ -197,4 +197,4 @@ class ExportWorkShiftsToFile(Intent):
         return Reply(f"Självklart, här är arbetspassen för {project.name} under "
                      f"{month} {year}! :smiley:",
                      file=work_shifts_file,
-                     file_name=f"work_shifts_{project.name}_{year}_{month}.xlsx")
+                     file_name=f"arbetspass_{project.name}_{year}_{month}.xlsx")
