@@ -1,9 +1,13 @@
+from datetime import datetime
+
+from pyttman import app
 from pyttman.core.containers import ReplyStream, Reply, Message
 from pyttman.core.entity_parsing.fields import BoolEntityField, \
     StringEntityField, IntEntityField
 from pyttman.core.entity_parsing.identifiers import DateTimeStringIdentifier
 from pyttman.core.intent import Intent
 
+from jarvis.abilities.finance.month import Month
 from jarvis.abilities.timekeeper.models import WorkShift, Project
 from jarvis.custom_identifiers import TimeStampIdentifier
 from jarvis.models import User
@@ -159,3 +163,38 @@ class ListProjects(Intent):
             reply.put(Reply(description))
         return reply
 
+class ExportWorkShiftsToFile(Intent):
+    """
+    Export workshifts to an xlsx file.
+    """
+    exact_match = ("exportera", "arbetspass",)
+    project_name = StringEntityField(valid_strings=Project.all_project_names)
+    month = StringEntityField(valid_strings=Month.names_as_list())
+    year = IntEntityField()
+
+    def respond(self, message: Message) -> Reply | ReplyStream:
+        project_name = message.entities["project_name"].lower()
+        if (project := self.ability.get_project_by_name(project_name)) is None:
+            return Reply("Projektet kunde inte hittas.")
+        if project.is_active is False:
+            return Reply("Projektet är inte aktivt - aktivera det först.")
+
+        if (year := message.entities["year"]) is None:
+            year = datetime.now(tz=app.settings.TIME_ZONE).year
+        if (month := message.entities["month"]) is None:
+            month = datetime.now(tz=app.settings.TIME_ZONE).month
+        else:
+            month = Month.get_month_calendar_int_from_name(month)
+
+        if not (work_shifts_file := self.ability.export_work_shifts_to_file(
+            project=project,
+            year=year,
+            month=month)
+        ):
+            return Reply("Har har inte antecknat några arbetpass med "
+                         f"{project_name} i {month} {year}...")
+
+        return Reply(f"Självklart, här är arbetspassen för {project.name} under "
+                     f"{month} {year}! :smiley:",
+                     file=work_shifts_file,
+                     file_name=f"work_shifts_{project.name}_{year}_{month}.xlsx")

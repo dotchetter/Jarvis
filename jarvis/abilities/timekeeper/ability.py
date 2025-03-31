@@ -1,16 +1,17 @@
-
+from collections import defaultdict
 from datetime import datetime, UTC
 from decimal import Decimal, ROUND_HALF_UP
+from io import BytesIO
 from typing import Sequence
 
 import pyttman
+import xlsxwriter
 from pyttman import app
 from pyttman.core.ability import Ability
 from pyttman.core.containers import Message, Reply, ReplyStream
 
 import jarvis.abilities.timekeeper.intents as intents
 from jarvis.abilities.timekeeper.models import WorkShift, Project
-from jarvis.models import User
 
 
 class TimeKeeper(Ability):
@@ -23,7 +24,8 @@ class TimeKeeper(Ability):
         intents.SetProjectAsDefault,
         intents.ActivateProject,
         intents.DeactivateProject,
-        intents.ListProjects)
+        intents.ListProjects,
+        intents.ExportWorkShiftsToFile)
 
     @staticmethod
     def get_total_billable_hours(*workshifts: Sequence[WorkShift]) -> Decimal:
@@ -264,3 +266,52 @@ class TimeKeeper(Ability):
             reply_stream.put("Du kan välja mellan "
                              f"{', '.join(available_projects)}.")
         return reply_stream
+
+    def export_work_shifts_to_file(self,
+                                  project: Project,
+                                  year: int,
+                                  month: int) -> BytesIO or None:
+        """
+        Export work_shifts to a file, in memory.
+        """
+        buffer = BytesIO()
+        workbook = xlsxwriter.Workbook(buffer, {"in_memory": True})
+        worksheet = workbook.add_worksheet()
+
+        row = 0
+        bold = workbook.add_format({"bold": True})
+
+        if not (all_work_shifts := WorkShift.objects.filter(
+                month=month,
+                year=year,
+                project=project).all()
+        ):
+            return None
+
+        date_to_work_shifts = defaultdict(list)
+        for work_shift in all_work_shifts:
+            date = work_shift.beginning.date()
+            date_to_work_shifts[date].append(work_shift)
+
+        for date in sorted(date_to_work_shifts.keys()):
+            work_shifts_for_date = date_to_work_shifts[date]
+            billable_hours = self.get_total_billable_hours(*work_shifts_for_date)
+
+            sum_string = "Totalt arbetade timmar denna dag:"
+            worksheet.write(row, 0, sum_string)
+            worksheet.write(row, 1, billable_hours)
+            row += 1
+            worksheet.write(row, 0, "")
+            row += 1
+            worksheet.write(row, 0, date.strftime("%Y-%m-%d"), bold)
+            row += 1
+
+        all_sum = self.get_total_billable_hours(*all_work_shifts)
+        worksheet.write(row + 2, 0,
+                        "Totalt arbetade timmar under perioden:", bold)
+        worksheet.write(row + 2, 1, all_sum, bold)
+        worksheet.write(0, 0, "")
+        workbook.close()
+        buffer.seek(0)
+
+        return buffer
