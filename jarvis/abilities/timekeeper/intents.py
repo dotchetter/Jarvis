@@ -181,10 +181,10 @@ class ExportWorkShiftsToFile(Intent):
 
         if (year := message.entities["year"]) is None:
             year = datetime.now(tz=app.settings.TIME_ZONE).year
-        if (month := message.entities["month"]) is None:
+        if (month_name := message.entities["month"]) is None:
             month = datetime.now(tz=app.settings.TIME_ZONE).month
         else:
-            month = Month.get_month_calendar_int_from_name(month)
+            month = Month.get_month_calendar_int_from_name(month_name)
 
         if not (work_shifts_file := self.ability.export_work_shifts_to_file(
             project=project,
