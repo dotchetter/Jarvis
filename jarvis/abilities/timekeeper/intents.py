@@ -92,7 +92,13 @@ class CreateWorkShiftFromString(Intent):
     until_now = BoolEntityField(message_contains=("nu",))
 
     def respond(self, message: Message) -> Reply | ReplyStream:
-        return self.ability.save_workshift_from_string(message)
+        try:
+            return self.ability.save_workshift_from_string(message)
+        except ValueError:
+            return Reply("Jag kunde inte spara arbetspasset. Om det inte förekom "
+                         "idag, behöver du ange datum. år-månad-dag-timme-minut. "
+                         f"Det jag fick var:\n*{message.as_str()}*")
+
 
 
 class CreateNewProject(Intent):
