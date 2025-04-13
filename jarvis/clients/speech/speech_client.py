@@ -24,19 +24,21 @@ class SpeechClient(BaseClient):
                  greeting_message: str,
                  silence_seconds_before_processing: int = 2,
                  silence_seconds_before_standby: int = 60,
-                 standby_mode_message: str = None,
                  name_similarity_threshold_percent: float = 50,
                  volume_threshold: int = 2000,
                  mute_word: str = "mute",
                  user_name_prompt: str = "What's your name?",
+                 muted_message: str = None,
+                 unmuted_message: str = None,
                  **kwargs):
 
         self.user_name_prompt = user_name_prompt
         self.greeting_message = greeting_message
         self.silence_seconds_before_standby = int(silence_seconds_before_standby)
         self.name_similarity_threshold_percent = int(name_similarity_threshold_percent)
-        self.standby_mode_message = standby_mode_message
         self.mute_word = mute_word
+        self.muted_message = muted_message
+        self.unmuted_message = unmuted_message
 
         self.stt_client = SpeechToTextEngine(
             silence_duration=int(silence_seconds_before_processing),
@@ -48,28 +50,6 @@ class SpeechClient(BaseClient):
             speed=os.environ["TTS_SPEED"])
 
         super().__init__(**kwargs)
-
-    def authorize(self) -> tuple[str, str]:
-
-        def read_microphone():
-            return self.stt_client.transcribe_microphone().lower().strip().replace(".", "")
-
-        self.tts_client.say("Hi! Whats your name?")
-        user_name = read_microphone()
-        logger.log(f" - user_name: {user_name}")
-
-        while not (user_alias := os.getenv(user_name)):
-            self.tts_client.say(f"Sorry, I don't know you."
-                           f"Only registered people can use this system. "
-                           f"Did I get your name wrong? Answer yes or no.")
-            if "yes" in read_microphone():
-                self.tts_client.say("Sorry about that, let's try again. What's your name?")
-                user_name = read_microphone()
-            else:
-                self.tts_client.say("Sorry, I can't help you. Goodbye.")
-                sys.exit(0)
-        return user_name, user_alias
-
 
     def run_client(self):
         user_name = os.getenv("STT_USER_NAME", "")
@@ -114,10 +94,13 @@ class SpeechClient(BaseClient):
                 if not muted and text_contains_mute(cleaned_text):
                     muted = True
                     logger.log(f" - [SpeechClient]: Muted.")
+                    self.tts_client.say(self.muted_message)
                     continue
                 elif muted and text_contains_unmute(cleaned_text):
                     dialog_refreshed = time()
                     muted = False
+                    self.tts_client.say(self.unmuted_message)
+                    continue
 
                 timeout_reached = (time() - dialog_refreshed > 120)
                 if timeout_reached or muted:
@@ -140,3 +123,6 @@ class SpeechClient(BaseClient):
                 logger.log("\n- [SpeechClient]: Exiting..")
                 self.tts_client.say("AI systems shutting down.")
                 sys.exit(0)
+            except Exception as e:
+                logger.log(f" - [SpeechClient]: Exception: {e}")
+                self.tts_client.say("Hm, something went wrong. Try again.")
