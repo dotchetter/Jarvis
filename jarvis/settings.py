@@ -102,12 +102,13 @@ if os.getenv("USE_SPEECH_CLIENT") == "True":
         "class": "jarvis.clients.speech.speech_client.SpeechClient",
         "greeting_message": os.environ["STT_GREETING_MESSAGE"],
         "silence_seconds_before_standby": os.environ["STT_SILENCE_SECONDS_BEFORE_STANDBY"],
-        "standby_mode_message": os.environ["STT_STANDBY_MODE_MESSAGE"],
         "name_similarity_threshold_percent": int(os.environ["STT_NAME_SIMILARITY_THRESHOLD_PERCENT"]),
         "silence_seconds_before_processing": int(os.environ["STT_SILENCE_SECONDS_BEFORE_PROCESSING"]),
         "mute_word": os.environ["STT_MUTE_WORD"],
         "volume_threshold": os.environ["STT_VOLUME_THRESHOLD"],
         "user_name_prompt": os.environ["STT_USER_NAME_PROMPT"],
+        "muted_message": os.environ["STT_MUTED_MESSAGE"],
+        "unmuted_message": os.environ["STT_UNMUTED_MESSAGE"],
     }
     ABILITIES.append("jarvis.abilities.musicplayer.ability.SpotifyAbility")
 else:
