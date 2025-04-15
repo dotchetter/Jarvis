@@ -39,6 +39,7 @@ class SpeechClient(BaseClient):
         self.mute_word = mute_word
         self.muted_message = muted_message
         self.unmuted_message = unmuted_message
+        self.muted = False
 
         self.stt_client = SpeechToTextEngine(
             silence_duration=int(silence_seconds_before_processing),
@@ -69,7 +70,6 @@ class SpeechClient(BaseClient):
         self.tts_client.say(self.greeting_message.format(user_name))
 
         dialog_refreshed = time()
-        muted = False
 
         def text_contains_unmute(text):
             # Remove all chars except letters and spaces
@@ -77,7 +77,6 @@ class SpeechClient(BaseClient):
             app_name = pyttman.settings.APP_NAME.lower()
             for word in text.lower().strip().split():
                 similarity = fuzz.ratio(word, app_name)
-                print("word:", word, "check", app_name, "similarity:", similarity)
                 if similarity >= self.name_similarity_threshold_percent:
                     return True
             return False
@@ -91,19 +90,19 @@ class SpeechClient(BaseClient):
                     continue
 
                 cleaned_text = re.sub(f"[{re.escape(string.punctuation)}]", "", text).strip().lower()
-                if not muted and text_contains_mute(cleaned_text):
-                    muted = True
+                if not self.muted and text_contains_mute(cleaned_text):
+                    self.muted = True
                     logger.log(f" - [SpeechClient]: Muted.")
                     self.tts_client.say(self.muted_message)
                     continue
-                elif muted and text_contains_unmute(cleaned_text):
+                elif self.muted and text_contains_unmute(cleaned_text):
                     dialog_refreshed = time()
-                    muted = False
+                    self.muted = False
                     self.tts_client.say(self.unmuted_message)
                     continue
 
                 timeout_reached = (time() - dialog_refreshed > 120)
-                if timeout_reached or muted:
+                if timeout_reached or self.muted:
                     continue
 
                 message = Message(text, client=self)
