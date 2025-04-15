@@ -98,6 +98,7 @@ ABILITIES = [
 ]
 
 if os.getenv("USE_SPEECH_CLIENT") == "True":
+    ABILITIES.append("jarvis.abilities.spotify.ability.SpotifyAbility")
     CLIENT = {
         "class": "jarvis.clients.speech.speech_client.SpeechClient",
         "greeting_message": os.environ["STT_GREETING_MESSAGE"],
@@ -110,7 +111,6 @@ if os.getenv("USE_SPEECH_CLIENT") == "True":
         "muted_message": os.environ["STT_MUTED_MESSAGE"],
         "unmuted_message": os.environ["STT_UNMUTED_MESSAGE"],
     }
-    ABILITIES.append("jarvis.abilities.musicplayer.ability.SpotifyAbility")
 else:
     CLIENT = {
         "class": "pyttman.clients.community.discord.client.DiscordClient",
