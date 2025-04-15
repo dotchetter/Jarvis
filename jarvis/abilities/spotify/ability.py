@@ -1,10 +1,11 @@
 import os
 
 import spotipy
+from pyttman import app
 from pyttman.core.ability import Ability
 from spotipy import SpotifyOAuth
 
-from jarvis.abilities.musicplayer.intents import *
+from jarvis.abilities.spotify.intents import *
 from jarvis.models import Features
 
 
@@ -21,6 +22,7 @@ class SpotifyAbility(Ability):
         NextSpotify,
         PreviousSpotify,
         WhatIsPlayingSpotify,
+        ListAvailableDevices
     )
 
     def before_create(self):
@@ -54,6 +56,7 @@ class SpotifyAbility(Ability):
 
     def play(self, device_id=None, song_uri=None):
         self.spotify.start_playback(device_id=device_id, uris=song_uri)
+        app.client.muted = True
 
     def next(self):
         self.spotify.next_track()

@@ -1,3 +1,4 @@
+import json
 from time import sleep
 
 import pyttman
@@ -174,3 +175,46 @@ class WhatIsPlayingSpotify(Intent):
         track = now_playing["item"]["name"]
         artist = now_playing["item"]["artists"][0]["name"]
         return Reply(f"Just nu spelas {track} av {artist}.")
+
+class ListAvailableDevices(Intent):
+    """
+    List all available devices on spotify.
+    """
+    exact_match = ("visa", "spotify", "enheter")
+
+    def respond(self, message: Message) -> Reply | ReplyStream:
+        """
+        List all available devices on spotify.
+        """
+        if user_disabled := self.ability.assert_user_enabled(message.user):
+            return user_disabled
+        devices = self.ability.devices_available()
+        if not devices["devices"]:
+            return Reply("Det finns inga enheter tillgängliga.")
+        device_list = [{"name": d["name"], "id": d["id"]} for d in devices["devices"]]
+        return Reply(f"Tillgängliga enheter: {json.dumps(device_list, indent=4)}.")
+
+class SetActiveDevice(Intent):
+    """
+    Set the active device on spotify.
+    """
+    lead = ("använd", "aktivera")
+    trail = ("enhet", "spotify", "spotify-enhet")
+
+    device_name = StringEntityField(span=5, exclude=("på",))
+
+    def respond(self, message: Message) -> Reply | ReplyStream:
+        """
+        Set the active device on spotify.
+        """
+        if user_disabled := self.ability.assert_user_enabled(message.user):
+            return user_disabled
+        devices = self.ability.devices_available()
+        if not devices["devices"]:
+            return Reply("Det finns inga enheter tillgängliga.")
+        device_name = message.entities["device_name"]
+        for device in devices["devices"]:
+            if device["name"].lower() == device_name.lower():
+                self.storage["device_id"] = device["id"]
+                return Reply(f"Jag har aktiverat enheten {device['name']}.")
+        return Reply(f"Jag kunde inte hitta enheten {device_name}.")
