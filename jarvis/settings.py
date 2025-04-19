@@ -8,7 +8,7 @@ from pyttman_base_plugin import PyttmanPlugin
 from pyttman_mongoengine_plugin import MongoEnginePlugin
 from pyttman_openai_plugin.plugin import OpenAIPlugin
 
-from jarvis.app import mongo_purge_all_memories, mongo_purge_memories, mongo_append_memory, mongo_get_memories
+from jarvis.app import mongo_purge_all_memories, mongo_purge_memories, mongo_add_memory, mongo_get_memories
 from jarvis.models import User
 
 load_dotenv()
@@ -81,7 +81,7 @@ PLUGINS = [
         enable_memories=True,
         purge_all_memories_callback=mongo_purge_all_memories,
         purge_memories_callback=mongo_purge_memories,
-        add_memory_callback=mongo_append_memory,
+        add_memory_callback=mongo_add_memory,
         get_memories_callback=mongo_get_memories,
         allowed_intercepts=[
             PyttmanPlugin.PluginInterceptPoint.no_intent_match,
@@ -141,7 +141,7 @@ LOG_FILE_DIR = APP_BASE_DIR / Path("logs")
 LOG_TO_STDOUT = True
 
 APP_NAME = "jarvis"
-APP_VERSION = "3.5.1"
+APP_VERSION = "3.5.2"
 DATETIME_FORMAT = "%Y-%m-%d-%H:%M"
 DATE_FORMAT = "%Y-%m-%d"
 TIMESTAMP_FORMAT = "%H:%M"
